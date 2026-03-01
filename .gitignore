@@ -1,0 +1,15 @@
+﻿node_modules/
+*.tgz
+.env
+.env.local
+.env.*.local
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Runtime probe outputs (can contain workspace-sensitive metadata)
+data/current-token-capability-report.json
+
+# Keep catalog in repo
+!data/slack-catalog.json

@@ -1,0 +1,28 @@
+{
+  "name": "slack-max-api-mcp",
+  "version": "1.0.5",
+  "description": "Slack MCP server (stdio) for Codex and Claude Code",
+  "main": "src/slack-mcp-server.js",
+  "bin": {
+    "slack-max-api-mcp": "src/slack-mcp-server.js"
+  },
+  "files": [
+    "src",
+    "data/slack-catalog.json",
+    "README.md",
+    ".env.example"
+  ],
+  "scripts": {
+    "build:catalog": "node scripts/generate-slack-catalog.js",
+    "start": "node src/slack-mcp-server.js",
+    "check": "node --check src/slack-mcp-server.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.27.1",
+    "zod": "^4.3.6"
+  }
+}

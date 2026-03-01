@@ -1,0 +1,3701 @@
+{
+  "generated_at": "2026-02-28T16:19:07.709Z",
+  "source": {
+    "sitemap": "https://docs.slack.dev/sitemap.xml",
+    "methods_reference": "https://docs.slack.dev/reference/methods",
+    "scopes_reference": "https://docs.slack.dev/reference/scopes"
+  },
+  "totals": {
+    "methods": 304,
+    "families": 33,
+    "scopes": 121,
+    "api_guide_urls": 15,
+    "tools_top_categories": 11
+  },
+  "api_guides": [
+    "https://docs.slack.dev/apis/",
+    "https://docs.slack.dev/apis/events-api/",
+    "https://docs.slack.dev/apis/events-api/comparing-http-socket-mode",
+    "https://docs.slack.dev/apis/events-api/using-http-request-urls",
+    "https://docs.slack.dev/apis/events-api/using-socket-mode",
+    "https://docs.slack.dev/apis/slack-connect/",
+    "https://docs.slack.dev/apis/slack-connect/using-slack-connect-api-methods",
+    "https://docs.slack.dev/apis/web-api/",
+    "https://docs.slack.dev/apis/web-api/pagination",
+    "https://docs.slack.dev/apis/web-api/rate-limits",
+    "https://docs.slack.dev/apis/web-api/real-time-search-api",
+    "https://docs.slack.dev/apis/web-api/user-presence-and-status",
+    "https://docs.slack.dev/apis/web-api/using-the-calls-api",
+    "https://docs.slack.dev/apis/web-api/using-the-conversations-api",
+    "https://docs.slack.dev/apis/web-api/using-web-api-with-postman"
+  ],
+  "tools_top_categories": [
+    "bolt-js",
+    "bolt-python",
+    "community-developed-tools",
+    "deno-slack-sdk",
+    "developer-sandboxes",
+    "java-slack-sdk",
+    "node-slack-sdk",
+    "partner-sandboxes",
+    "python-slack-sdk",
+    "slack-cli",
+    "slack-github-action"
+  ],
+  "scopes": [
+    "admin",
+    "admin.analytics.read",
+    "admin.app_activities.read",
+    "admin.apps.read",
+    "admin.apps.write",
+    "admin.barriers.read",
+    "admin.barriers.write",
+    "admin.chat.read",
+    "admin.chat.write",
+    "admin.conversations.manage_objects",
+    "admin.conversations.read",
+    "admin.conversations.write",
+    "admin.invites.read",
+    "admin.invites.write",
+    "admin.roles.read",
+    "admin.roles.write",
+    "admin.teams.read",
+    "admin.teams.write",
+    "admin.usergroups.read",
+    "admin.usergroups.write",
+    "admin.users.read",
+    "admin.users.write",
+    "admin.workflows.read",
+    "admin.workflows.write",
+    "app_configurations.read",
+    "app_configurations.write",
+    "app_mentions.read",
+    "apps.requests.write",
+    "assistant.write",
+    "auditlogs.read",
+    "authorizations.read",
+    "bookmarks.read",
+    "bookmarks.write",
+    "bot",
+    "calls.read",
+    "calls.write",
+    "canvases.read",
+    "canvases.write",
+    "channels.history",
+    "channels.join",
+    "channels.manage",
+    "channels.read",
+    "channels.write",
+    "channels.write.invites",
+    "channels.write.topic",
+    "chat.write",
+    "chat.write.customize",
+    "chat.write.public",
+    "client",
+    "commands",
+    "connections.write",
+    "conversations.connect.manage",
+    "conversations.connect.read",
+    "conversations.connect.write",
+    "datastore.read",
+    "datastore.write",
+    "dnd.read",
+    "dnd.write",
+    "email",
+    "emoji.read",
+    "files.read",
+    "files.write",
+    "groups.history",
+    "groups.read",
+    "groups.write",
+    "groups.write.invites",
+    "groups.write.topic",
+    "hosting.read",
+    "hosting.write",
+    "identify",
+    "im.history",
+    "im.read",
+    "im.write",
+    "im.write.topic",
+    "incoming-webhook",
+    "links.embed.write",
+    "links.read",
+    "links.write",
+    "lists.read",
+    "lists.write",
+    "metadata.message.read",
+    "mpim.history",
+    "mpim.read",
+    "mpim.write",
+    "mpim.write.topic",
+    "openid",
+    "pins.read",
+    "pins.write",
+    "profile",
+    "reactions.read",
+    "reactions.write",
+    "reminders.read",
+    "reminders.write",
+    "remote_files.read",
+    "remote_files.share",
+    "remote_files.write",
+    "search.read",
+    "search.read.enterprise",
+    "search.read.files",
+    "search.read.im",
+    "search.read.mpim",
+    "search.read.private",
+    "search.read.public",
+    "search.read.users",
+    "stars.read",
+    "stars.write",
+    "team.billing.read",
+    "team.preferences.read",
+    "team.read",
+    "tokens.basic",
+    "triggers.read",
+    "triggers.write",
+    "usergroups.read",
+    "usergroups.write",
+    "users.profile.read",
+    "users.profile.write",
+    "users.read",
+    "users.read.email",
+    "users.write",
+    "workflows.templates.read",
+    "workflows.templates.write"
+  ],
+  "families": [
+    {
+      "family": "admin",
+      "count": 104,
+      "korean_hint": "조직/관리자 운영 자동화"
+    },
+    {
+      "family": "api",
+      "count": 1,
+      "korean_hint": "해당 도메인의 Slack 기능 제어"
+    },
+    {
+      "family": "apps",
+      "count": 21,
+      "korean_hint": "앱 설정/연결/데이터스토어"
+    },
+    {
+      "family": "assistant",
+      "count": 5,
+      "korean_hint": "AI Assistant 검색/스레드 컨텍스트"
+    },
+    {
+      "family": "auth",
+      "count": 3,
+      "korean_hint": "인증 테스트/취소/조회"
+    },
+    {
+      "family": "bookmarks",
+      "count": 4,
+      "korean_hint": "북마크 추가/편집/삭제/조회"
+    },
+    {
+      "family": "bots",
+      "count": 1,
+      "korean_hint": "해당 도메인의 Slack 기능 제어"
+    },
+    {
+      "family": "calls",
+      "count": 6,
+      "korean_hint": "콜(Call) 객체 생성/수정/종료"
+    },
+    {
+      "family": "canvases",
+      "count": 6,
+      "korean_hint": "캔버스 생성/수정/조회/권한"
+    },
+    {
+      "family": "chat",
+      "count": 13,
+      "korean_hint": "메시지 전송/수정/삭제/스트리밍"
+    },
+    {
+      "family": "conversations",
+      "count": 28,
+      "korean_hint": "채널/대화방 생성/조회/이력/멤버"
+    },
+    {
+      "family": "dialog",
+      "count": 1,
+      "korean_hint": "해당 도메인의 Slack 기능 제어"
+    },
+    {
+      "family": "dnd",
+      "count": 5,
+      "korean_hint": "방해금지 상태 조회/설정"
+    },
+    {
+      "family": "emoji",
+      "count": 1,
+      "korean_hint": "해당 도메인의 Slack 기능 제어"
+    },
+    {
+      "family": "entity",
+      "count": 1,
+      "korean_hint": "해당 도메인의 Slack 기능 제어"
+    },
+    {
+      "family": "files",
+      "count": 15,
+      "korean_hint": "파일 업로드/조회/공유/삭제"
+    },
+    {
+      "family": "functions",
+      "count": 8,
+      "korean_hint": "해당 도메인의 Slack 기능 제어"
+    },
+    {
+      "family": "migration",
+      "count": 1,
+      "korean_hint": "해당 도메인의 Slack 기능 제어"
+    },
+    {
+      "family": "oauth",
+      "count": 4,
+      "korean_hint": "OAuth 토큰/교환"
+    },
+    {
+      "family": "openid",
+      "count": 2,
+      "korean_hint": "해당 도메인의 Slack 기능 제어"
+    },
+    {
+      "family": "pins",
+      "count": 3,
+      "korean_hint": "해당 도메인의 Slack 기능 제어"
+    },
+    {
+      "family": "reactions",
+      "count": 4,
+      "korean_hint": "리액션 추가/삭제"
+    },
+    {
+      "family": "reminders",
+      "count": 5,
+      "korean_hint": "리마인더 생성/조회/완료"
+    },
+    {
+      "family": "rtm",
+      "count": 2,
+      "korean_hint": "해당 도메인의 Slack 기능 제어"
+    },
+    {
+      "family": "search",
+      "count": 3,
+      "korean_hint": "검색(메시지/파일/전체)"
+    },
+    {
+      "family": "slackLists",
+      "count": 12,
+      "korean_hint": "해당 도메인의 Slack 기능 제어"
+    },
+    {
+      "family": "stars",
+      "count": 3,
+      "korean_hint": "해당 도메인의 Slack 기능 제어"
+    },
+    {
+      "family": "team",
+      "count": 9,
+      "korean_hint": "해당 도메인의 Slack 기능 제어"
+    },
+    {
+      "family": "tooling",
+      "count": 1,
+      "korean_hint": "해당 도메인의 Slack 기능 제어"
+    },
+    {
+      "family": "usergroups",
+      "count": 7,
+      "korean_hint": "유저그룹 관리"
+    },
+    {
+      "family": "users",
+      "count": 13,
+      "korean_hint": "유저 조회/프로필/프레즌스"
+    },
+    {
+      "family": "views",
+      "count": 4,
+      "korean_hint": "모달/뷰 열기/수정"
+    },
+    {
+      "family": "workflows",
+      "count": 8,
+      "korean_hint": "워크플로우 관련 관리"
+    }
+  ],
+  "methods": [
+    {
+      "method": "admin.analytics.getFile",
+      "family": "admin",
+      "url": "https://docs.slack.dev/reference/methods/admin.analytics.getFile",
+      "description": "Retrieve analytics data for a given date, presented as a compressed JSON file",
+      "scopes": [
+        "admin.analytics.read"
+      ],
+      "korean_rephrase": "admin.analytics.getFile 메서드는 Retrieve analytics data for a given date, presented as a compressed JSON file 기능을 수행합니다.",
+      "family_korean_hint": "조직/관리자 운영 자동화"
+    },
+    {
+      "method": "admin.apps.activities.list",
+      "family": "admin",
+      "url": "https://docs.slack.dev/reference/methods/admin.apps.activities.list",
+      "description": "Get logs for a specified team/org",
+      "scopes": [
+        "admin.app_activities.read"
+      ],
+      "korean_rephrase": "admin.apps.activities.list 메서드는 Get logs for a specified team/org 기능을 수행합니다.",
+      "family_korean_hint": "조직/관리자 운영 자동화"
+    },
+    {
+      "method": "admin.apps.approve",
+      "family": "admin",
+      "url": "https://docs.slack.dev/reference/methods/admin.apps.approve",
+      "description": "Approve an app for installation on a workspace.",
+      "scopes": [
+        "admin.apps.write"
+      ],
+      "korean_rephrase": "admin.apps.approve 메서드는 Approve an app for installation on a workspace. 기능을 수행합니다.",
+      "family_korean_hint": "조직/관리자 운영 자동화"
+    },
+    {
+      "method": "admin.apps.approved.list",
+      "family": "admin",
+      "url": "https://docs.slack.dev/reference/methods/admin.apps.approved.list",
+      "description": "List approved apps for an org or workspace.",
+      "scopes": [
+        "admin.apps.read"
+      ],
+      "korean_rephrase": "admin.apps.approved.list 메서드는 List approved apps for an org or workspace. 기능을 수행합니다.",
+      "family_korean_hint": "조직/관리자 운영 자동화"
+    },
+    {
+      "method": "admin.apps.clearResolution",
+      "family": "admin",
+      "url": "https://docs.slack.dev/reference/methods/admin.apps.clearResolution",
+      "description": "Clear an app resolution",
+      "scopes": [
+        "admin.apps.write"
+      ],
+      "korean_rephrase": "admin.apps.clearResolution 메서드는 Clear an app resolution 기능을 수행합니다.",
+      "family_korean_hint": "조직/관리자 운영 자동화"
+    },
+    {
+      "method": "admin.apps.config.lookup",
+      "family": "admin",
+      "url": "https://docs.slack.dev/reference/methods/admin.apps.config.lookup",
+      "description": "Look up the app config for connectors by their IDs",
+      "scopes": [
+        "admin.apps.read"
+      ],
+      "korean_rephrase": "admin.apps.config.lookup 메서드는 Look up the app config for connectors by their IDs 기능을 수행합니다.",
+      "family_korean_hint": "조직/관리자 운영 자동화"
+    },
+    {
+      "method": "admin.apps.config.set",
+      "family": "admin",
+      "url": "https://docs.slack.dev/reference/methods/admin.apps.config.set",
+      "description": "Set the app config for a connector",
+      "scopes": [
+        "admin.apps.write"
+      ],
+      "korean_rephrase": "admin.apps.config.set 메서드는 Set the app config for a connector 기능을 수행합니다.",
+      "family_korean_hint": "조직/관리자 운영 자동화"
+    },
+    {
+      "method": "admin.apps.requests.cancel",
+      "family": "admin",
+      "url": "https://docs.slack.dev/reference/methods/admin.apps.requests.cancel",
+      "description": "Cancel app request for team",
+      "scopes": [
+        "admin.apps.write"
+      ],
+      "korean_rephrase": "admin.apps.requests.cancel 메서드는 Cancel app request for team 기능을 수행합니다.",
+      "family_korean_hint": "조직/관리자 운영 자동화"
+    },
+    {
+      "method": "admin.apps.requests.list",
+      "family": "admin",
+      "url": "https://docs.slack.dev/reference/methods/admin.apps.requests.list",
+      "description": "List app requests for a team/workspace.",
+      "scopes": [
+        "admin.apps.read"
+      ],
+      "korean_rephrase": "admin.apps.requests.list 메서드는 List app requests for a team/workspace. 기능을 수행합니다.",
+      "family_korean_hint": "조직/관리자 운영 자동화"
+    },
+    {
+      "method": "admin.apps.restrict",
+      "family": "admin",
+      "url": "https://docs.slack.dev/reference/methods/admin.apps.restrict",
+      "description": "Restrict an app for installation on a workspace.",
+      "scopes": [
+        "admin.apps.write"
+      ],
+      "korean_rephrase": "admin.apps.restrict 메서드는 Restrict an app for installation on a workspace. 기능을 수행합니다.",
+      "family_korean_hint": "조직/관리자 운영 자동화"
+    },
+    {
+      "method": "admin.apps.restricted.list",
+      "family": "admin",
+      "url": "https://docs.slack.dev/reference/methods/admin.apps.restricted.list",
+      "description": "List restricted apps for an org or workspace.",
+      "scopes": [
+        "admin.apps.read"
+      ],
+      "korean_rephrase": "admin.apps.restricted.list 메서드는 List restricted apps for an org or workspace. 기능을 수행합니다.",
+      "family_korean_hint": "조직/관리자 운영 자동화"
+    },
+    {
+      "method": "admin.apps.uninstall",
+      "family": "admin",
+      "url": "https://docs.slack.dev/reference/methods/admin.apps.uninstall",
+      "description": "Uninstall an app from one or many workspaces, or an entire enterprise organization.",
+      "scopes": [
+        "admin.apps.write"
+      ],
+      "korean_rephrase": "admin.apps.uninstall 메서드는 Uninstall an app from one or many workspaces, or an entire enterprise organization. 기능을 수행합니다.",
+      "family_korean_hint": "조직/관리자 운영 자동화"
+    },
+    {
+      "method": "admin.audit.anomaly.allow.getItem",
+      "family": "admin",
+      "url": "https://docs.slack.dev/reference/methods/admin.audit.anomaly.allow.getItem",
+      "description": "API to allow Enterprise org admins to read the allow list of IP blocks and ASNs from the enterprise configuration.",
+      "scopes": [
+        "admin"
+      ],
+      "korean_rephrase": "admin.audit.anomaly.allow.getItem 메서드는 API to allow Enterprise org admins to read the allow list of IP blocks and ASNs from the enterprise configuration. 기능을 수행합니다.",
+      "family_korean_hint": "조직/관리자 운영 자동화"
+    },
+    {
+      "method": "admin.audit.anomaly.allow.updateItem",
+      "family": "admin",
+      "url": "https://docs.slack.dev/reference/methods/admin.audit.anomaly.allow.updateItem",
+      "description": "API to allow Enterprise org admins to write/overwrite the allow list of IP blocks and ASNs from the enterprise configuration.",
+      "scopes": [
+        "admin"
+      ],
+      "korean_rephrase": "admin.audit.anomaly.allow.updateItem 메서드는 API to allow Enterprise org admins to write/overwrite the allow list of IP blocks and ASNs from the enterprise configuration. 기능을 수행합니다.",
+      "family_korean_hint": "조직/관리자 운영 자동화"
+    },
+    {
+      "method": "admin.auth.policy.assignEntities",
+      "family": "admin",
+      "url": "https://docs.slack.dev/reference/methods/admin.auth.policy.assignEntities",
+      "description": "Assign entities to a particular authentication policy.",
+      "scopes": [
+        "admin.users.write"
+      ],
+      "korean_rephrase": "admin.auth.policy.assignEntities 메서드는 Assign entities to a particular authentication policy. 기능을 수행합니다.",
+      "family_korean_hint": "조직/관리자 운영 자동화"
+    },
+    {
+      "method": "admin.auth.policy.getEntities",
+      "family": "admin",
+      "url": "https://docs.slack.dev/reference/methods/admin.auth.policy.getEntities",
+      "description": "Fetch all the entities assigned to a particular authentication policy by name.",
+      "scopes": [
+        "admin.users.read"
+      ],
+      "korean_rephrase": "admin.auth.policy.getEntities 메서드는 Fetch all the entities assigned to a particular authentication policy by name. 기능을 수행합니다.",
+      "family_korean_hint": "조직/관리자 운영 자동화"
+    },
+    {
+      "method": "admin.auth.policy.removeEntities",
+      "family": "admin",
+      "url": "https://docs.slack.dev/reference/methods/admin.auth.policy.removeEntities",
+      "description": "Remove specified entities from a specified authentication policy.",
+      "scopes": [
+        "admin.users.write"
+      ],
+      "korean_rephrase": "admin.auth.policy.removeEntities 메서드는 Remove specified entities from a specified authentication policy. 기능을 수행합니다.",
+      "family_korean_hint": "조직/관리자 운영 자동화"
+    },
+    {
+      "method": "admin.barriers.create",
+      "family": "admin",
+      "url": "https://docs.slack.dev/reference/methods/admin.barriers.create",
+      "description": "Create an Information Barrier",
+      "scopes": [
+        "admin.barriers.write"
+      ],
+      "korean_rephrase": "admin.barriers.create 메서드는 Create an Information Barrier 기능을 수행합니다.",
+      "family_korean_hint": "조직/관리자 운영 자동화"
+    },
+    {
+      "method": "admin.barriers.delete",
+      "family": "admin",
+      "url": "https://docs.slack.dev/reference/methods/admin.barriers.delete",
+      "description": "Delete an existing Information Barrier",
+      "scopes": [
+        "admin.barriers.write"
+      ],
+      "korean_rephrase": "admin.barriers.delete 메서드는 Delete an existing Information Barrier 기능을 수행합니다.",
+      "family_korean_hint": "조직/관리자 운영 자동화"
+    },
+    {
+      "method": "admin.barriers.list",
+      "family": "admin",
+      "url": "https://docs.slack.dev/reference/methods/admin.barriers.list",
+      "description": "Get all Information Barriers for your organization",
+      "scopes": [
+        "admin.barriers.read"
+      ],
+      "korean_rephrase": "admin.barriers.list 메서드는 Get all Information Barriers for your organization 기능을 수행합니다.",
+      "family_korean_hint": "조직/관리자 운영 자동화"
+    },
+    {
+      "method": "admin.barriers.update",
+      "family": "admin",
+      "url": "https://docs.slack.dev/reference/methods/admin.barriers.update",
+      "description": "Update an existing Information Barrier",
+      "scopes": [
+        "admin.barriers.write"
+      ],
+      "korean_rephrase": "admin.barriers.update 메서드는 Update an existing Information Barrier 기능을 수행합니다.",
+      "family_korean_hint": "조직/관리자 운영 자동화"
+    },
+    {
+      "method": "admin.conversations.archive",
+      "family": "admin",
+      "url": "https://docs.slack.dev/reference/methods/admin.conversations.archive",
+      "description": "Archive a public or private channel.",
+      "scopes": [
+        "admin.conversations.write"
+      ],
+      "korean_rephrase": "admin.conversations.archive 메서드는 Archive a public or private channel. 기능을 수행합니다.",
+      "family_korean_hint": "조직/관리자 운영 자동화"
+    },
+    {
+      "method": "admin.conversations.bulkArchive",
+      "family": "admin",
+      "url": "https://docs.slack.dev/reference/methods/admin.conversations.bulkArchive",
+      "description": "Archive public or private channels in bulk.",
+      "scopes": [
+        "admin.conversations.write"
+      ],
+      "korean_rephrase": "admin.conversations.bulkArchive 메서드는 Archive public or private channels in bulk. 기능을 수행합니다.",
+      "family_korean_hint": "조직/관리자 운영 자동화"
+    },
+    {
+      "method": "admin.conversations.bulkDelete",
+      "family": "admin",
+      "url": "https://docs.slack.dev/reference/methods/admin.conversations.bulkDelete",
+      "description": "Delete public or private channels in bulk",
+      "scopes": [
+        "admin.conversations.write"
+      ],
+      "korean_rephrase": "admin.conversations.bulkDelete 메서드는 Delete public or private channels in bulk 기능을 수행합니다.",
+      "family_korean_hint": "조직/관리자 운영 자동화"
+    },
+    {
+      "method": "admin.conversations.bulkMove",
+      "family": "admin",
+      "url": "https://docs.slack.dev/reference/methods/admin.conversations.bulkMove",
+      "description": "Move public or private channels in bulk.",
+      "scopes": [
+        "admin.conversations.write"
+      ],
+      "korean_rephrase": "admin.conversations.bulkMove 메서드는 Move public or private channels in bulk. 기능을 수행합니다.",
+      "family_korean_hint": "조직/관리자 운영 자동화"
+    },
+    {
+      "method": "admin.conversations.bulkSetExcludeFromSlackAi",
+      "family": "admin",
+      "url": "https://docs.slack.dev/reference/methods/admin.conversations.bulkSetExcludeFromSlackAi",
+      "description": "Exclude channels from Slack AI in bulk",
+      "scopes": [
+        "admin.conversations.write"
+      ],
+      "korean_rephrase": "admin.conversations.bulkSetExcludeFromSlackAi 메서드는 Exclude channels from Slack AI in bulk 기능을 수행합니다.",
+      "family_korean_hint": "조직/관리자 운영 자동화"
+    },
+    {
+      "method": "admin.conversations.convertToPrivate",
+      "family": "admin",
+      "url": "https://docs.slack.dev/reference/methods/admin.conversations.convertToPrivate",
+      "description": "Convert a public channel to a private channel.",
+      "scopes": [
+        "admin.conversations.write"
+      ],
+      "korean_rephrase": "admin.conversations.convertToPrivate 메서드는 Convert a public channel to a private channel. 기능을 수행합니다.",
+      "family_korean_hint": "조직/관리자 운영 자동화"
+    },
+    {
+      "method": "admin.conversations.convertToPublic",
+      "family": "admin",
+      "url": "https://docs.slack.dev/reference/methods/admin.conversations.convertToPublic",
+      "description": "Convert a private channel to a public channel.",
+      "scopes": [
+        "admin.conversations.write"
+      ],
+      "korean_rephrase": "admin.conversations.convertToPublic 메서드는 Convert a private channel to a public channel. 기능을 수행합니다.",
+      "family_korean_hint": "조직/관리자 운영 자동화"
+    },
+    {
+      "method": "admin.conversations.create",
+      "family": "admin",
+      "url": "https://docs.slack.dev/reference/methods/admin.conversations.create",
+      "description": "Create a public or private channel-based conversation.",
+      "scopes": [
+        "admin.conversations.write"
+      ],
+      "korean_rephrase": "admin.conversations.create 메서드는 Create a public or private channel-based conversation. 기능을 수행합니다.",
+      "family_korean_hint": "조직/관리자 운영 자동화"
+    },
+    {
+      "method": "admin.conversations.createForObjects",
+      "family": "admin",
+      "url": "https://docs.slack.dev/reference/methods/admin.conversations.createForObjects",
+      "description": "Create a Salesforce channel for the corresponding object provided.",
+      "scopes": [
+        "admin.conversations.manage_objects"
+      ],
+      "korean_rephrase": "admin.conversations.createForObjects 메서드는 Create a Salesforce channel for the corresponding object provided. 기능을 수행합니다.",
+      "family_korean_hint": "조직/관리자 운영 자동화"
+    },
+    {
+      "method": "admin.conversations.delete",
+      "family": "admin",
+      "url": "https://docs.slack.dev/reference/methods/admin.conversations.delete",
+      "description": "Delete a public or private channel.",
+      "scopes": [
+        "admin.conversations.write"
+      ],
+      "korean_rephrase": "admin.conversations.delete 메서드는 Delete a public or private channel. 기능을 수행합니다.",
+      "family_korean_hint": "조직/관리자 운영 자동화"
+    },
+    {
+      "method": "admin.conversations.disconnectShared",
+      "family": "admin",
+      "url": "https://docs.slack.dev/reference/methods/admin.conversations.disconnectShared",
+      "description": "Disconnect a connected channel from one or more workspaces.",
+      "scopes": [
+        "admin.conversations.write"
+      ],
+      "korean_rephrase": "admin.conversations.disconnectShared 메서드는 Disconnect a connected channel from one or more workspaces. 기능을 수행합니다.",
+      "family_korean_hint": "조직/관리자 운영 자동화"
+    },
+    {
+      "method": "admin.conversations.ekm.listOriginalConnectedChannelInfo",
+      "family": "admin",
+      "url": "https://docs.slack.dev/reference/methods/admin.conversations.ekm.listOriginalConnectedChannelInfo",
+      "description": "List all disconnected channels—i.e., channels that were once connected to other workspaces and then disconnected—and the corresponding original channel IDs for key revocation with EKM.",
+      "scopes": [
+        "admin.conversations.read"
+      ],
+      "korean_rephrase": "admin.conversations.ekm.listOriginalConnectedChannelInfo 메서드는 List all disconnected channels—i.e., channels that were once connected to other workspaces and then disconnected—and the corresponding original channel IDs for key revocation with EKM. 기능을 수행합니다.",
+      "family_korean_hint": "조직/관리자 운영 자동화"
+    },
+    {
+      "method": "admin.conversations.getConversationPrefs",
+      "family": "admin",
+      "url": "https://docs.slack.dev/reference/methods/admin.conversations.getConversationPrefs",
+      "description": "Get conversation preferences for a public or private channel.",
+      "scopes": [
+        "admin.conversations.read"
+      ],
+      "korean_rephrase": "admin.conversations.getConversationPrefs 메서드는 Get conversation preferences for a public or private channel. 기능을 수행합니다.",
+      "family_korean_hint": "조직/관리자 운영 자동화"
+    },
+    {
+      "method": "admin.conversations.getCustomRetention",
+      "family": "admin",
+      "url": "https://docs.slack.dev/reference/methods/admin.conversations.getCustomRetention",
+      "description": "This API endpoint can be used by any admin to get a conversation's retention policy.",
+      "scopes": [
+        "admin.conversations.read"
+      ],
+      "korean_rephrase": "admin.conversations.getCustomRetention 메서드는 This API endpoint can be used by any admin to get a conversation's retention policy. 기능을 수행합니다.",
+      "family_korean_hint": "조직/관리자 운영 자동화"
+    },
+    {
+      "method": "admin.conversations.getTeams",
+      "family": "admin",
+      "url": "https://docs.slack.dev/reference/methods/admin.conversations.getTeams",
+      "description": "Get all the workspaces a given public or private channel is connected to within this Enterprise org.",
+      "scopes": [
+        "admin.conversations.read"
+      ],
+      "korean_rephrase": "admin.conversations.getTeams 메서드는 Get all the workspaces a given public or private channel is connected to within this Enterprise org. 기능을 수행합니다.",
+      "family_korean_hint": "조직/관리자 운영 자동화"
+    },
+    {
+      "method": "admin.conversations.invite",
+      "family": "admin",
+      "url": "https://docs.slack.dev/reference/methods/admin.conversations.invite",
+      "description": "Invite a user to a public or private channel.",
+      "scopes": [
+        "admin.conversations.write"
+      ],
+      "korean_rephrase": "admin.conversations.invite 메서드는 Invite a user to a public or private channel. 기능을 수행합니다.",
+      "family_korean_hint": "조직/관리자 운영 자동화"
+    },
+    {
+      "method": "admin.conversations.linkObjects",
+      "family": "admin",
+      "url": "https://docs.slack.dev/reference/methods/admin.conversations.linkObjects",
+      "description": "Link a Salesforce record to a channel",
+      "scopes": [
+        "admin.conversations.manage_objects"
+      ],
+      "korean_rephrase": "admin.conversations.linkObjects 메서드는 Link a Salesforce record to a channel 기능을 수행합니다.",
+      "family_korean_hint": "조직/관리자 운영 자동화"
+    },
+    {
+      "method": "admin.conversations.lookup",
+      "family": "admin",
+      "url": "https://docs.slack.dev/reference/methods/admin.conversations.lookup",
+      "description": "Returns channels on the given team using the filters.",
+      "scopes": [
+        "admin.conversations.read"
+      ],
+      "korean_rephrase": "admin.conversations.lookup 메서드는 Returns channels on the given team using the filters. 기능을 수행합니다.",
+      "family_korean_hint": "조직/관리자 운영 자동화"
+    },
+    {
+      "method": "admin.conversations.removeCustomRetention",
+      "family": "admin",
+      "url": "https://docs.slack.dev/reference/methods/admin.conversations.removeCustomRetention",
+      "description": "This API endpoint can be used by any admin to remove a conversation's retention policy.",
+      "scopes": [
+        "admin.conversations.write"
+      ],
+      "korean_rephrase": "admin.conversations.removeCustomRetention 메서드는 This API endpoint can be used by any admin to remove a conversation's retention policy. 기능을 수행합니다.",
+      "family_korean_hint": "조직/관리자 운영 자동화"
+    },
+    {
+      "method": "admin.conversations.rename",
+      "family": "admin",
+      "url": "https://docs.slack.dev/reference/methods/admin.conversations.rename",
+      "description": "Rename a public or private channel.",
+      "scopes": [
+        "admin.conversations.write"
+      ],
+      "korean_rephrase": "admin.conversations.rename 메서드는 Rename a public or private channel. 기능을 수행합니다.",
+      "family_korean_hint": "조직/관리자 운영 자동화"
+    },
+    {
+      "method": "admin.conversations.restrictAccess.addGroup",
+      "family": "admin",
+      "url": "https://docs.slack.dev/reference/methods/admin.conversations.restrictAccess.addGroup",
+      "description": "Add an allowlist of IDP groups for accessing a channel",
+      "scopes": [
+        "admin.conversations.write"
+      ],
+      "korean_rephrase": "admin.conversations.restrictAccess.addGroup 메서드는 Add an allowlist of IDP groups for accessing a channel 기능을 수행합니다.",
+      "family_korean_hint": "조직/관리자 운영 자동화"
+    },
+    {
+      "method": "admin.conversations.restrictAccess.listGroups",
+      "family": "admin",
+      "url": "https://docs.slack.dev/reference/methods/admin.conversations.restrictAccess.listGroups",
+      "description": "List all IDP Groups linked to a channel",
+      "scopes": [
+        "admin.conversations.read"
+      ],
+      "korean_rephrase": "admin.conversations.restrictAccess.listGroups 메서드는 List all IDP Groups linked to a channel 기능을 수행합니다.",
+      "family_korean_hint": "조직/관리자 운영 자동화"
+    },
+    {
+      "method": "admin.conversations.restrictAccess.removeGroup",
+      "family": "admin",
+      "url": "https://docs.slack.dev/reference/methods/admin.conversations.restrictAccess.removeGroup",
+      "description": "Remove a linked IDP group linked from a private channel",
+      "scopes": [
+        "admin.conversations.write"
+      ],
+      "korean_rephrase": "admin.conversations.restrictAccess.removeGroup 메서드는 Remove a linked IDP group linked from a private channel 기능을 수행합니다.",
+      "family_korean_hint": "조직/관리자 운영 자동화"
+    },
+    {
+      "method": "admin.conversations.search",
+      "family": "admin",
+      "url": "https://docs.slack.dev/reference/methods/admin.conversations.search",
+      "description": "Search for public or private channels in an Enterprise organization.",
+      "scopes": [
+        "admin.conversations.read"
+      ],
+      "korean_rephrase": "admin.conversations.search 메서드는 Search for public or private channels in an Enterprise organization. 기능을 수행합니다.",
+      "family_korean_hint": "조직/관리자 운영 자동화"
+    },
+    {
+      "method": "admin.conversations.setConversationPrefs",
+      "family": "admin",
+      "url": "https://docs.slack.dev/reference/methods/admin.conversations.setConversationPrefs",
+      "description": "Set the posting permissions for a public or private channel.",
+      "scopes": [
+        "admin.conversations.write"
+      ],
+      "korean_rephrase": "admin.conversations.setConversationPrefs 메서드는 Set the posting permissions for a public or private channel. 기능을 수행합니다.",
+      "family_korean_hint": "조직/관리자 운영 자동화"
+    },
+    {
+      "method": "admin.conversations.setCustomRetention",
+      "family": "admin",
+      "url": "https://docs.slack.dev/reference/methods/admin.conversations.setCustomRetention",
+      "description": "This API endpoint can be used by any admin to set a conversation's retention policy.",
+      "scopes": [
+        "admin.conversations.write"
+      ],
+      "korean_rephrase": "admin.conversations.setCustomRetention 메서드는 This API endpoint can be used by any admin to set a conversation's retention policy. 기능을 수행합니다.",
+      "family_korean_hint": "조직/관리자 운영 자동화"
+    },
+    {
+      "method": "admin.conversations.setTeams",
+      "family": "admin",
+      "url": "https://docs.slack.dev/reference/methods/admin.conversations.setTeams",
+      "description": "Set the workspaces in an Enterprise org that connect to a public or private channel.",
+      "scopes": [
+        "admin.conversations.write"
+      ],
+      "korean_rephrase": "admin.conversations.setTeams 메서드는 Set the workspaces in an Enterprise org that connect to a public or private channel. 기능을 수행합니다.",
+      "family_korean_hint": "조직/관리자 운영 자동화"
+    },
+    {
+      "method": "admin.conversations.unarchive",
+      "family": "admin",
+      "url": "https://docs.slack.dev/reference/methods/admin.conversations.unarchive",
+      "description": "Unarchive a public or private channel.",
+      "scopes": [
+        "admin.conversations.write"
+      ],
+      "korean_rephrase": "admin.conversations.unarchive 메서드는 Unarchive a public or private channel. 기능을 수행합니다.",
+      "family_korean_hint": "조직/관리자 운영 자동화"
+    },
+    {
+      "method": "admin.conversations.unlinkObjects",
+      "family": "admin",
+      "url": "https://docs.slack.dev/reference/methods/admin.conversations.unlinkObjects",
+      "description": "Unlink a Salesforce record from a channel",
+      "scopes": [
+        "admin.conversations.manage_objects"
+      ],
+      "korean_rephrase": "admin.conversations.unlinkObjects 메서드는 Unlink a Salesforce record from a channel 기능을 수행합니다.",
+      "family_korean_hint": "조직/관리자 운영 자동화"
+    },
+    {
+      "method": "admin.emoji.add",
+      "family": "admin",
+      "url": "https://docs.slack.dev/reference/methods/admin.emoji.add",
+      "description": "Add an emoji.",
+      "scopes": [
+        "admin.teams.write"
+      ],
+      "korean_rephrase": "admin.emoji.add 메서드는 Add an emoji. 기능을 수행합니다.",
+      "family_korean_hint": "조직/관리자 운영 자동화"
+    },
+    {
+      "method": "admin.emoji.addAlias",
+      "family": "admin",
+      "url": "https://docs.slack.dev/reference/methods/admin.emoji.addAlias",
+      "description": "Add an emoji alias.",
+      "scopes": [
+        "admin.teams.write"
+      ],
+      "korean_rephrase": "admin.emoji.addAlias 메서드는 Add an emoji alias. 기능을 수행합니다.",
+      "family_korean_hint": "조직/관리자 운영 자동화"
+    },
+    {
+      "method": "admin.emoji.list",
+      "family": "admin",
+      "url": "https://docs.slack.dev/reference/methods/admin.emoji.list",
+      "description": "List emoji for an Enterprise organization.",
+      "scopes": [
+        "admin.teams.read"
+      ],
+      "korean_rephrase": "admin.emoji.list 메서드는 List emoji for an Enterprise organization. 기능을 수행합니다.",
+      "family_korean_hint": "조직/관리자 운영 자동화"
+    },
+    {
+      "method": "admin.emoji.remove",
+      "family": "admin",
+      "url": "https://docs.slack.dev/reference/methods/admin.emoji.remove",
+      "description": "Remove an emoji across an Enterprise organization",
+      "scopes": [
+        "admin.teams.write"
+      ],
+      "korean_rephrase": "admin.emoji.remove 메서드는 Remove an emoji across an Enterprise organization 기능을 수행합니다.",
+      "family_korean_hint": "조직/관리자 운영 자동화"
+    },
+    {
+      "method": "admin.emoji.rename",
+      "family": "admin",
+      "url": "https://docs.slack.dev/reference/methods/admin.emoji.rename",
+      "description": "Rename an emoji.",
+      "scopes": [
+        "admin.teams.write"
+      ],
+      "korean_rephrase": "admin.emoji.rename 메서드는 Rename an emoji. 기능을 수행합니다.",
+      "family_korean_hint": "조직/관리자 운영 자동화"
+    },
+    {
+      "method": "admin.functions.list",
+      "family": "admin",
+      "url": "https://docs.slack.dev/reference/methods/admin.functions.list",
+      "description": "Look up functions by a set of apps.",
+      "scopes": [
+        "admin.workflows.read"
+      ],
+      "korean_rephrase": "admin.functions.list 메서드는 Look up functions by a set of apps. 기능을 수행합니다.",
+      "family_korean_hint": "조직/관리자 운영 자동화"
+    },
+    {
+      "method": "admin.functions.permissions.lookup",
+      "family": "admin",
+      "url": "https://docs.slack.dev/reference/methods/admin.functions.permissions.lookup",
+      "description": "Lookup the visibility of multiple Slack functions and include the users if it is limited to particular named entities.",
+      "scopes": [
+        "admin.workflows.read"
+      ],
+      "korean_rephrase": "admin.functions.permissions.lookup 메서드는 Lookup the visibility of multiple Slack functions and include the users if it is limited to particular named entities. 기능을 수행합니다.",
+      "family_korean_hint": "조직/관리자 운영 자동화"
+    },
+    {
+      "method": "admin.functions.permissions.set",
+      "family": "admin",
+      "url": "https://docs.slack.dev/reference/methods/admin.functions.permissions.set",
+      "description": "Set the visibility of a Slack function and define the users or workspaces if it is set to named_entities.",
+      "scopes": [
+        "admin.workflows.read"
+      ],
+      "korean_rephrase": "admin.functions.permissions.set 메서드는 Set the visibility of a Slack function and define the users or workspaces if it is set to named_entities. 기능을 수행합니다.",
+      "family_korean_hint": "조직/관리자 운영 자동화"
+    },
+    {
+      "method": "admin.inviteRequests.approve",
+      "family": "admin",
+      "url": "https://docs.slack.dev/reference/methods/admin.inviteRequests.approve",
+      "description": "Approve a workspace invite request.",
+      "scopes": [
+        "admin.invites.write"
+      ],
+      "korean_rephrase": "admin.inviteRequests.approve 메서드는 Approve a workspace invite request. 기능을 수행합니다.",
+      "family_korean_hint": "조직/관리자 운영 자동화"
+    },
+    {
+      "method": "admin.inviteRequests.approved.list",
+      "family": "admin",
+      "url": "https://docs.slack.dev/reference/methods/admin.inviteRequests.approved.list",
+      "description": "List all approved workspace invite requests.",
+      "scopes": [
+        "admin.invites.read"
+      ],
+      "korean_rephrase": "admin.inviteRequests.approved.list 메서드는 List all approved workspace invite requests. 기능을 수행합니다.",
+      "family_korean_hint": "조직/관리자 운영 자동화"
+    },
+    {
+      "method": "admin.inviteRequests.denied.list",
+      "family": "admin",
+      "url": "https://docs.slack.dev/reference/methods/admin.inviteRequests.denied.list",
+      "description": "List all denied workspace invite requests.",
+      "scopes": [
+        "admin.invites.read"
+      ],
+      "korean_rephrase": "admin.inviteRequests.denied.list 메서드는 List all denied workspace invite requests. 기능을 수행합니다.",
+      "family_korean_hint": "조직/관리자 운영 자동화"
+    },
+    {
+      "method": "admin.inviteRequests.deny",
+      "family": "admin",
+      "url": "https://docs.slack.dev/reference/methods/admin.inviteRequests.deny",
+      "description": "Deny a workspace invite request.",
+      "scopes": [
+        "admin.invites.write"
+      ],
+      "korean_rephrase": "admin.inviteRequests.deny 메서드는 Deny a workspace invite request. 기능을 수행합니다.",
+      "family_korean_hint": "조직/관리자 운영 자동화"
+    },
+    {
+      "method": "admin.inviteRequests.list",
+      "family": "admin",
+      "url": "https://docs.slack.dev/reference/methods/admin.inviteRequests.list",
+      "description": "List all pending workspace invite requests.",
+      "scopes": [
+        "admin.invites.read"
+      ],
+      "korean_rephrase": "admin.inviteRequests.list 메서드는 List all pending workspace invite requests. 기능을 수행합니다.",
+      "family_korean_hint": "조직/관리자 운영 자동화"
+    },
+    {
+      "method": "admin.roles.addAssignments",
+      "family": "admin",
+      "url": "https://docs.slack.dev/reference/methods/admin.roles.addAssignments",
+      "description": "Adds members to the specified role with the specified scopes",
+      "scopes": [
+        "admin.roles.write"
+      ],
+      "korean_rephrase": "admin.roles.addAssignments 메서드는 Adds members to the specified role with the specified scopes 기능을 수행합니다.",
+      "family_korean_hint": "조직/관리자 운영 자동화"
+    },
+    {
+      "method": "admin.roles.listAssignments",
+      "family": "admin",
+      "url": "https://docs.slack.dev/reference/methods/admin.roles.listAssignments",
+      "description": "Lists assignments for all roles across entities. Options to scope results by any combination of roles or entities",
+      "scopes": [
+        "admin.roles.read"
+      ],
+      "korean_rephrase": "admin.roles.listAssignments 메서드는 Lists assignments for all roles across entities. Options to scope results by any combination of roles or entities 기능을 수행합니다.",
+      "family_korean_hint": "조직/관리자 운영 자동화"
+    },
+    {
+      "method": "admin.roles.removeAssignments",
+      "family": "admin",
+      "url": "https://docs.slack.dev/reference/methods/admin.roles.removeAssignments",
+      "description": "Removes a set of users from a role for the given scopes and entities",
+      "scopes": [
+        "admin.roles.write"
+      ],
+      "korean_rephrase": "admin.roles.removeAssignments 메서드는 Removes a set of users from a role for the given scopes and entities 기능을 수행합니다.",
+      "family_korean_hint": "조직/관리자 운영 자동화"
+    },
+    {
+      "method": "admin.teams.admins.list",
+      "family": "admin",
+      "url": "https://docs.slack.dev/reference/methods/admin.teams.admins.list",
+      "description": "List all of the admins on a given workspace.",
+      "scopes": [
+        "admin.teams.read"
+      ],
+      "korean_rephrase": "admin.teams.admins.list 메서드는 List all of the admins on a given workspace. 기능을 수행합니다.",
+      "family_korean_hint": "조직/관리자 운영 자동화"
+    },
+    {
+      "method": "admin.teams.create",
+      "family": "admin",
+      "url": "https://docs.slack.dev/reference/methods/admin.teams.create",
+      "description": "Create an Enterprise team.",
+      "scopes": [
+        "admin.teams.write"
+      ],
+      "korean_rephrase": "admin.teams.create 메서드는 Create an Enterprise team. 기능을 수행합니다.",
+      "family_korean_hint": "조직/관리자 운영 자동화"
+    },
+    {
+      "method": "admin.teams.list",
+      "family": "admin",
+      "url": "https://docs.slack.dev/reference/methods/admin.teams.list",
+      "description": "List all teams in an Enterprise organization",
+      "scopes": [
+        "admin.teams.read"
+      ],
+      "korean_rephrase": "admin.teams.list 메서드는 List all teams in an Enterprise organization 기능을 수행합니다.",
+      "family_korean_hint": "조직/관리자 운영 자동화"
+    },
+    {
+      "method": "admin.teams.owners.list",
+      "family": "admin",
+      "url": "https://docs.slack.dev/reference/methods/admin.teams.owners.list",
+      "description": "List all of the owners on a given workspace.",
+      "scopes": [
+        "admin.teams.read"
+      ],
+      "korean_rephrase": "admin.teams.owners.list 메서드는 List all of the owners on a given workspace. 기능을 수행합니다.",
+      "family_korean_hint": "조직/관리자 운영 자동화"
+    },
+    {
+      "method": "admin.teams.settings.info",
+      "family": "admin",
+      "url": "https://docs.slack.dev/reference/methods/admin.teams.settings.info",
+      "description": "Fetch information about settings in a workspace",
+      "scopes": [
+        "admin.teams.read"
+      ],
+      "korean_rephrase": "admin.teams.settings.info 메서드는 Fetch information about settings in a workspace 기능을 수행합니다.",
+      "family_korean_hint": "조직/관리자 운영 자동화"
+    },
+    {
+      "method": "admin.teams.settings.setDefaultChannels",
+      "family": "admin",
+      "url": "https://docs.slack.dev/reference/methods/admin.teams.settings.setDefaultChannels",
+      "description": "Set the default channels of a workspace.",
+      "scopes": [
+        "admin.teams.write"
+      ],
+      "korean_rephrase": "admin.teams.settings.setDefaultChannels 메서드는 Set the default channels of a workspace. 기능을 수행합니다.",
+      "family_korean_hint": "조직/관리자 운영 자동화"
+    },
+    {
+      "method": "admin.teams.settings.setDescription",
+      "family": "admin",
+      "url": "https://docs.slack.dev/reference/methods/admin.teams.settings.setDescription",
+      "description": "Set the description of a given workspace.",
+      "scopes": [
+        "admin.teams.write"
+      ],
+      "korean_rephrase": "admin.teams.settings.setDescription 메서드는 Set the description of a given workspace. 기능을 수행합니다.",
+      "family_korean_hint": "조직/관리자 운영 자동화"
+    },
+    {
+      "method": "admin.teams.settings.setDiscoverability",
+      "family": "admin",
+      "url": "https://docs.slack.dev/reference/methods/admin.teams.settings.setDiscoverability",
+      "description": "An API method that allows admins to set the discoverability of a given workspace",
+      "scopes": [
+        "admin.teams.write"
+      ],
+      "korean_rephrase": "admin.teams.settings.setDiscoverability 메서드는 An API method that allows admins to set the discoverability of a given workspace 기능을 수행합니다.",
+      "family_korean_hint": "조직/관리자 운영 자동화"
+    },
+    {
+      "method": "admin.teams.settings.setIcon",
+      "family": "admin",
+      "url": "https://docs.slack.dev/reference/methods/admin.teams.settings.setIcon",
+      "description": "Sets the icon of a workspace.",
+      "scopes": [
+        "admin.teams.write"
+      ],
+      "korean_rephrase": "admin.teams.settings.setIcon 메서드는 Sets the icon of a workspace. 기능을 수행합니다.",
+      "family_korean_hint": "조직/관리자 운영 자동화"
+    },
+    {
+      "method": "admin.teams.settings.setName",
+      "family": "admin",
+      "url": "https://docs.slack.dev/reference/methods/admin.teams.settings.setName",
+      "description": "Set the name of a given workspace.",
+      "scopes": [
+        "admin.teams.write"
+      ],
+      "korean_rephrase": "admin.teams.settings.setName 메서드는 Set the name of a given workspace. 기능을 수행합니다.",
+      "family_korean_hint": "조직/관리자 운영 자동화"
+    },
+    {
+      "method": "admin.usergroups.addChannels",
+      "family": "admin",
+      "url": "https://docs.slack.dev/reference/methods/admin.usergroups.addChannels",
+      "description": "Add up to one hundred default channels to an IDP group.",
+      "scopes": [
+        "admin.usergroups.write"
+      ],
+      "korean_rephrase": "admin.usergroups.addChannels 메서드는 Add up to one hundred default channels to an IDP group. 기능을 수행합니다.",
+      "family_korean_hint": "조직/관리자 운영 자동화"
+    },
+    {
+      "method": "admin.usergroups.addTeams",
+      "family": "admin",
+      "url": "https://docs.slack.dev/reference/methods/admin.usergroups.addTeams",
+      "description": "Associate one or more default workspaces with an organization-wide IDP group.",
+      "scopes": [
+        "admin.teams.write"
+      ],
+      "korean_rephrase": "admin.usergroups.addTeams 메서드는 Associate one or more default workspaces with an organization-wide IDP group. 기능을 수행합니다.",
+      "family_korean_hint": "조직/관리자 운영 자동화"
+    },
+    {
+      "method": "admin.usergroups.listChannels",
+      "family": "admin",
+      "url": "https://docs.slack.dev/reference/methods/admin.usergroups.listChannels",
+      "description": "List the channels linked to an org-level IDP group (user group).",
+      "scopes": [
+        "admin.usergroups.read"
+      ],
+      "korean_rephrase": "admin.usergroups.listChannels 메서드는 List the channels linked to an org-level IDP group (user group). 기능을 수행합니다.",
+      "family_korean_hint": "조직/관리자 운영 자동화"
+    },
+    {
+      "method": "admin.usergroups.removeChannels",
+      "family": "admin",
+      "url": "https://docs.slack.dev/reference/methods/admin.usergroups.removeChannels",
+      "description": "Remove one or more default channels from an org-level IDP group (user group).",
+      "scopes": [
+        "admin.usergroups.write"
+      ],
+      "korean_rephrase": "admin.usergroups.removeChannels 메서드는 Remove one or more default channels from an org-level IDP group (user group). 기능을 수행합니다.",
+      "family_korean_hint": "조직/관리자 운영 자동화"
+    },
+    {
+      "method": "admin.users.assign",
+      "family": "admin",
+      "url": "https://docs.slack.dev/reference/methods/admin.users.assign",
+      "description": "Add an Enterprise user to a workspace.",
+      "scopes": [
+        "admin.users.write"
+      ],
+      "korean_rephrase": "admin.users.assign 메서드는 Add an Enterprise user to a workspace. 기능을 수행합니다.",
+      "family_korean_hint": "조직/관리자 운영 자동화"
+    },
+    {
+      "method": "admin.users.getExpiration",
+      "family": "admin",
+      "url": "https://docs.slack.dev/reference/methods/admin.users.getExpiration",
+      "description": "Fetches the expiration timestamp for a guest.",
+      "scopes": [
+        "admin.users.read"
+      ],
+      "korean_rephrase": "admin.users.getExpiration 메서드는 Fetches the expiration timestamp for a guest. 기능을 수행합니다.",
+      "family_korean_hint": "조직/관리자 운영 자동화"
+    },
+    {
+      "method": "admin.users.invite",
+      "family": "admin",
+      "url": "https://docs.slack.dev/reference/methods/admin.users.invite",
+      "description": "Invite a user to a workspace.",
+      "scopes": [
+        "admin.users.write"
+      ],
+      "korean_rephrase": "admin.users.invite 메서드는 Invite a user to a workspace. 기능을 수행합니다.",
+      "family_korean_hint": "조직/관리자 운영 자동화"
+    },
+    {
+      "method": "admin.users.list",
+      "family": "admin",
+      "url": "https://docs.slack.dev/reference/methods/admin.users.list",
+      "description": "List users on a workspace",
+      "scopes": [
+        "admin.users.read"
+      ],
+      "korean_rephrase": "admin.users.list 메서드는 List users on a workspace 기능을 수행합니다.",
+      "family_korean_hint": "조직/관리자 운영 자동화"
+    },
+    {
+      "method": "admin.users.remove",
+      "family": "admin",
+      "url": "https://docs.slack.dev/reference/methods/admin.users.remove",
+      "description": "Remove a user from a workspace.",
+      "scopes": [
+        "admin.users.write"
+      ],
+      "korean_rephrase": "admin.users.remove 메서드는 Remove a user from a workspace. 기능을 수행합니다.",
+      "family_korean_hint": "조직/관리자 운영 자동화"
+    },
+    {
+      "method": "admin.users.session.clearSettings",
+      "family": "admin",
+      "url": "https://docs.slack.dev/reference/methods/admin.users.session.clearSettings",
+      "description": "Clear user-specific session settings—the session duration and what happens when the client closes—for a list of users.",
+      "scopes": [
+        "admin.users.write"
+      ],
+      "korean_rephrase": "admin.users.session.clearSettings 메서드는 Clear user-specific session settings—the session duration and what happens when the client closes—for a list of users. 기능을 수행합니다.",
+      "family_korean_hint": "조직/관리자 운영 자동화"
+    },
+    {
+      "method": "admin.users.session.getSettings",
+      "family": "admin",
+      "url": "https://docs.slack.dev/reference/methods/admin.users.session.getSettings",
+      "description": "Get user-specific session settings—the session duration and what happens when the client closes—given a list of users.",
+      "scopes": [
+        "admin.users.read"
+      ],
+      "korean_rephrase": "admin.users.session.getSettings 메서드는 Get user-specific session settings—the session duration and what happens when the client closes—given a list of users. 기능을 수행합니다.",
+      "family_korean_hint": "조직/관리자 운영 자동화"
+    },
+    {
+      "method": "admin.users.session.invalidate",
+      "family": "admin",
+      "url": "https://docs.slack.dev/reference/methods/admin.users.session.invalidate",
+      "description": "Revoke a single session for a user. The user will be forced to login to Slack.",
+      "scopes": [
+        "admin.users.write"
+      ],
+      "korean_rephrase": "admin.users.session.invalidate 메서드는 Revoke a single session for a user. The user will be forced to login to Slack. 기능을 수행합니다.",
+      "family_korean_hint": "조직/관리자 운영 자동화"
+    },
+    {
+      "method": "admin.users.session.list",
+      "family": "admin",
+      "url": "https://docs.slack.dev/reference/methods/admin.users.session.list",
+      "description": "List active user sessions for an organization",
+      "scopes": [
+        "admin.users.read"
+      ],
+      "korean_rephrase": "admin.users.session.list 메서드는 List active user sessions for an organization 기능을 수행합니다.",
+      "family_korean_hint": "조직/관리자 운영 자동화"
+    },
+    {
+      "method": "admin.users.session.reset",
+      "family": "admin",
+      "url": "https://docs.slack.dev/reference/methods/admin.users.session.reset",
+      "description": "Wipes all valid sessions on all devices for a given user",
+      "scopes": [
+        "admin.users.write"
+      ],
+      "korean_rephrase": "admin.users.session.reset 메서드는 Wipes all valid sessions on all devices for a given user 기능을 수행합니다.",
+      "family_korean_hint": "조직/관리자 운영 자동화"
+    },
+    {
+      "method": "admin.users.session.resetBulk",
+      "family": "admin",
+      "url": "https://docs.slack.dev/reference/methods/admin.users.session.resetBulk",
+      "description": "Enqueues an asynchronous job to wipe all valid sessions on all devices for a given list of users",
+      "scopes": [
+        "admin.users.write"
+      ],
+      "korean_rephrase": "admin.users.session.resetBulk 메서드는 Enqueues an asynchronous job to wipe all valid sessions on all devices for a given list of users 기능을 수행합니다.",
+      "family_korean_hint": "조직/관리자 운영 자동화"
+    },
+    {
+      "method": "admin.users.session.setSettings",
+      "family": "admin",
+      "url": "https://docs.slack.dev/reference/methods/admin.users.session.setSettings",
+      "description": "Configure the user-level session settings—the session duration and what happens when the client closes—for one or more users.",
+      "scopes": [
+        "admin.users.write"
+      ],
+      "korean_rephrase": "admin.users.session.setSettings 메서드는 Configure the user-level session settings—the session duration and what happens when the client closes—for one or more users. 기능을 수행합니다.",
+      "family_korean_hint": "조직/관리자 운영 자동화"
+    },
+    {
+      "method": "admin.users.setAdmin",
+      "family": "admin",
+      "url": "https://docs.slack.dev/reference/methods/admin.users.setAdmin",
+      "description": "Set an existing regular user or owner to be a workspace or org admin.",
+      "scopes": [
+        "admin.users.write"
+      ],
+      "korean_rephrase": "admin.users.setAdmin 메서드는 Set an existing regular user or owner to be a workspace or org admin. 기능을 수행합니다.",
+      "family_korean_hint": "조직/관리자 운영 자동화"
+    },
+    {
+      "method": "admin.users.setExpiration",
+      "family": "admin",
+      "url": "https://docs.slack.dev/reference/methods/admin.users.setExpiration",
+      "description": "Set an expiration for a guest user",
+      "scopes": [
+        "admin.users.write"
+      ],
+      "korean_rephrase": "admin.users.setExpiration 메서드는 Set an expiration for a guest user 기능을 수행합니다.",
+      "family_korean_hint": "조직/관리자 운영 자동화"
+    },
+    {
+      "method": "admin.users.setOwner",
+      "family": "admin",
+      "url": "https://docs.slack.dev/reference/methods/admin.users.setOwner",
+      "description": "Set an existing regular user or admin to be a workspace or org owner.",
+      "scopes": [
+        "admin.users.write"
+      ],
+      "korean_rephrase": "admin.users.setOwner 메서드는 Set an existing regular user or admin to be a workspace or org owner. 기능을 수행합니다.",
+      "family_korean_hint": "조직/관리자 운영 자동화"
+    },
+    {
+      "method": "admin.users.setRegular",
+      "family": "admin",
+      "url": "https://docs.slack.dev/reference/methods/admin.users.setRegular",
+      "description": "Set an existing guest user, admin user, or owner to be a regular user.",
+      "scopes": [
+        "admin.users.write"
+      ],
+      "korean_rephrase": "admin.users.setRegular 메서드는 Set an existing guest user, admin user, or owner to be a regular user. 기능을 수행합니다.",
+      "family_korean_hint": "조직/관리자 운영 자동화"
+    },
+    {
+      "method": "admin.users.unsupportedVersions.export",
+      "family": "admin",
+      "url": "https://docs.slack.dev/reference/methods/admin.users.unsupportedVersions.export",
+      "description": "Ask Slackbot to send you an export listing all workspace members using unsupported software, presented as a zipped CSV file.",
+      "scopes": [
+        "admin.users.read"
+      ],
+      "korean_rephrase": "admin.users.unsupportedVersions.export 메서드는 Ask Slackbot to send you an export listing all workspace members using unsupported software, presented as a zipped CSV file. 기능을 수행합니다.",
+      "family_korean_hint": "조직/관리자 운영 자동화"
+    },
+    {
+      "method": "admin.workflows.collaborators.add",
+      "family": "admin",
+      "url": "https://docs.slack.dev/reference/methods/admin.workflows.collaborators.add",
+      "description": "Add collaborators to workflows within the team or enterprise",
+      "scopes": [
+        "admin.workflows.write"
+      ],
+      "korean_rephrase": "admin.workflows.collaborators.add 메서드는 Add collaborators to workflows within the team or enterprise 기능을 수행합니다.",
+      "family_korean_hint": "조직/관리자 운영 자동화"
+    },
+    {
+      "method": "admin.workflows.collaborators.remove",
+      "family": "admin",
+      "url": "https://docs.slack.dev/reference/methods/admin.workflows.collaborators.remove",
+      "description": "Remove collaborators from workflows within the team or enterprise",
+      "scopes": [
+        "admin.workflows.write"
+      ],
+      "korean_rephrase": "admin.workflows.collaborators.remove 메서드는 Remove collaborators from workflows within the team or enterprise 기능을 수행합니다.",
+      "family_korean_hint": "조직/관리자 운영 자동화"
+    },
+    {
+      "method": "admin.workflows.permissions.lookup",
+      "family": "admin",
+      "url": "https://docs.slack.dev/reference/methods/admin.workflows.permissions.lookup",
+      "description": "Look up the permissions for a set of workflows",
+      "scopes": [
+        "admin.workflows.read"
+      ],
+      "korean_rephrase": "admin.workflows.permissions.lookup 메서드는 Look up the permissions for a set of workflows 기능을 수행합니다.",
+      "family_korean_hint": "조직/관리자 운영 자동화"
+    },
+    {
+      "method": "admin.workflows.search",
+      "family": "admin",
+      "url": "https://docs.slack.dev/reference/methods/admin.workflows.search",
+      "description": "Search workflows within the team or enterprise",
+      "scopes": [
+        "admin.workflows.read"
+      ],
+      "korean_rephrase": "admin.workflows.search 메서드는 Search workflows within the team or enterprise 기능을 수행합니다.",
+      "family_korean_hint": "조직/관리자 운영 자동화"
+    },
+    {
+      "method": "admin.workflows.triggers.types.permissions.lookup",
+      "family": "admin",
+      "url": "https://docs.slack.dev/reference/methods/admin.workflows.triggers.types.permissions.lookup",
+      "description": "List the permissions for using each trigger type",
+      "scopes": [
+        "client"
+      ],
+      "korean_rephrase": "admin.workflows.triggers.types.permissions.lookup 메서드는 List the permissions for using each trigger type 기능을 수행합니다.",
+      "family_korean_hint": "조직/관리자 운영 자동화"
+    },
+    {
+      "method": "admin.workflows.triggers.types.permissions.set",
+      "family": "admin",
+      "url": "https://docs.slack.dev/reference/methods/admin.workflows.triggers.types.permissions.set",
+      "description": "Set the permissions for using a trigger type",
+      "scopes": [
+        "client"
+      ],
+      "korean_rephrase": "admin.workflows.triggers.types.permissions.set 메서드는 Set the permissions for using a trigger type 기능을 수행합니다.",
+      "family_korean_hint": "조직/관리자 운영 자동화"
+    },
+    {
+      "method": "admin.workflows.unpublish",
+      "family": "admin",
+      "url": "https://docs.slack.dev/reference/methods/admin.workflows.unpublish",
+      "description": "Unpublish workflows within the team or enterprise",
+      "scopes": [
+        "admin.workflows.write"
+      ],
+      "korean_rephrase": "admin.workflows.unpublish 메서드는 Unpublish workflows within the team or enterprise 기능을 수행합니다.",
+      "family_korean_hint": "조직/관리자 운영 자동화"
+    },
+    {
+      "method": "api.test",
+      "family": "api",
+      "url": "https://docs.slack.dev/reference/methods/api.test",
+      "description": "Checks API calling code.",
+      "scopes": [],
+      "korean_rephrase": "api.test 메서드는 Checks API calling code. 기능을 수행합니다.",
+      "family_korean_hint": "해당 도메인의 Slack 기능 제어"
+    },
+    {
+      "method": "apps.activities.list",
+      "family": "apps",
+      "url": "https://docs.slack.dev/reference/methods/apps.activities.list",
+      "description": "Get logs for a specified app",
+      "scopes": [
+        "hosting.read"
+      ],
+      "korean_rephrase": "apps.activities.list 메서드는 Get logs for a specified app 기능을 수행합니다.",
+      "family_korean_hint": "앱 설정/연결/데이터스토어"
+    },
+    {
+      "method": "apps.auth.external.delete",
+      "family": "apps",
+      "url": "https://docs.slack.dev/reference/methods/apps.auth.external.delete",
+      "description": "Delete external auth tokens only on the Slack side",
+      "scopes": [],
+      "korean_rephrase": "apps.auth.external.delete 메서드는 Delete external auth tokens only on the Slack side 기능을 수행합니다.",
+      "family_korean_hint": "앱 설정/연결/데이터스토어"
+    },
+    {
+      "method": "apps.auth.external.get",
+      "family": "apps",
+      "url": "https://docs.slack.dev/reference/methods/apps.auth.external.get",
+      "description": "Get the access token for the provided token ID",
+      "scopes": [],
+      "korean_rephrase": "apps.auth.external.get 메서드는 Get the access token for the provided token ID 기능을 수행합니다.",
+      "family_korean_hint": "앱 설정/연결/데이터스토어"
+    },
+    {
+      "method": "apps.connections.open",
+      "family": "apps",
+      "url": "https://docs.slack.dev/reference/methods/apps.connections.open",
+      "description": "Generate a temporary Socket Mode WebSocket URL that your app can connect to in order to receive events and interactive payloads over.",
+      "scopes": [],
+      "korean_rephrase": "apps.connections.open 메서드는 Generate a temporary Socket Mode WebSocket URL that your app can connect to in order to receive events and interactive payloads over. 기능을 수행합니다.",
+      "family_korean_hint": "앱 설정/연결/데이터스토어"
+    },
+    {
+      "method": "apps.datastore.bulkDelete",
+      "family": "apps",
+      "url": "https://docs.slack.dev/reference/methods/apps.datastore.bulkDelete",
+      "description": "Delete items from a datastore in bulk",
+      "scopes": [
+        "datastore.write"
+      ],
+      "korean_rephrase": "apps.datastore.bulkDelete 메서드는 Delete items from a datastore in bulk 기능을 수행합니다.",
+      "family_korean_hint": "앱 설정/연결/데이터스토어"
+    },
+    {
+      "method": "apps.datastore.bulkGet",
+      "family": "apps",
+      "url": "https://docs.slack.dev/reference/methods/apps.datastore.bulkGet",
+      "description": "Get items from a datastore in bulk",
+      "scopes": [
+        "datastore.read"
+      ],
+      "korean_rephrase": "apps.datastore.bulkGet 메서드는 Get items from a datastore in bulk 기능을 수행합니다.",
+      "family_korean_hint": "앱 설정/연결/데이터스토어"
+    },
+    {
+      "method": "apps.datastore.bulkPut",
+      "family": "apps",
+      "url": "https://docs.slack.dev/reference/methods/apps.datastore.bulkPut",
+      "description": "Creates or replaces existing items in bulk",
+      "scopes": [
+        "datastore.write"
+      ],
+      "korean_rephrase": "apps.datastore.bulkPut 메서드는 Creates or replaces existing items in bulk 기능을 수행합니다.",
+      "family_korean_hint": "앱 설정/연결/데이터스토어"
+    },
+    {
+      "method": "apps.datastore.count",
+      "family": "apps",
+      "url": "https://docs.slack.dev/reference/methods/apps.datastore.count",
+      "description": "Count the number of items in a datastore that match a query",
+      "scopes": [
+        "datastore.read"
+      ],
+      "korean_rephrase": "apps.datastore.count 메서드는 Count the number of items in a datastore that match a query 기능을 수행합니다.",
+      "family_korean_hint": "앱 설정/연결/데이터스토어"
+    },
+    {
+      "method": "apps.datastore.delete",
+      "family": "apps",
+      "url": "https://docs.slack.dev/reference/methods/apps.datastore.delete",
+      "description": "Delete an item from a datastore",
+      "scopes": [
+        "datastore.write"
+      ],
+      "korean_rephrase": "apps.datastore.delete 메서드는 Delete an item from a datastore 기능을 수행합니다.",
+      "family_korean_hint": "앱 설정/연결/데이터스토어"
+    },
+    {
+      "method": "apps.datastore.get",
+      "family": "apps",
+      "url": "https://docs.slack.dev/reference/methods/apps.datastore.get",
+      "description": "Get an item from a datastore",
+      "scopes": [
+        "datastore.read"
+      ],
+      "korean_rephrase": "apps.datastore.get 메서드는 Get an item from a datastore 기능을 수행합니다.",
+      "family_korean_hint": "앱 설정/연결/데이터스토어"
+    },
+    {
+      "method": "apps.datastore.put",
+      "family": "apps",
+      "url": "https://docs.slack.dev/reference/methods/apps.datastore.put",
+      "description": "Creates a new item, or replaces an old item with a new item.",
+      "scopes": [
+        "datastore.write"
+      ],
+      "korean_rephrase": "apps.datastore.put 메서드는 Creates a new item, or replaces an old item with a new item. 기능을 수행합니다.",
+      "family_korean_hint": "앱 설정/연결/데이터스토어"
+    },
+    {
+      "method": "apps.datastore.query",
+      "family": "apps",
+      "url": "https://docs.slack.dev/reference/methods/apps.datastore.query",
+      "description": "Query a datastore for items",
+      "scopes": [
+        "datastore.read"
+      ],
+      "korean_rephrase": "apps.datastore.query 메서드는 Query a datastore for items 기능을 수행합니다.",
+      "family_korean_hint": "앱 설정/연결/데이터스토어"
+    },
+    {
+      "method": "apps.datastore.update",
+      "family": "apps",
+      "url": "https://docs.slack.dev/reference/methods/apps.datastore.update",
+      "description": "Edits an existing item's attributes, or adds a new item if it does not already exist.",
+      "scopes": [
+        "datastore.write"
+      ],
+      "korean_rephrase": "apps.datastore.update 메서드는 Edits an existing item's attributes, or adds a new item if it does not already exist. 기능을 수행합니다.",
+      "family_korean_hint": "앱 설정/연결/데이터스토어"
+    },
+    {
+      "method": "apps.event.authorizations.list",
+      "family": "apps",
+      "url": "https://docs.slack.dev/reference/methods/apps.event.authorizations.list",
+      "description": "Get a list of authorizations for the given event context. Each authorization represents an app installation that the event is visible to.",
+      "scopes": [
+        "authorizations.read"
+      ],
+      "korean_rephrase": "apps.event.authorizations.list 메서드는 Get a list of authorizations for the given event context. Each authorization represents an app installation that the event is visible to. 기능을 수행합니다.",
+      "family_korean_hint": "앱 설정/연결/데이터스토어"
+    },
+    {
+      "method": "apps.manifest.create",
+      "family": "apps",
+      "url": "https://docs.slack.dev/reference/methods/apps.manifest.create",
+      "description": "Create an app from an app manifest.",
+      "scopes": [],
+      "korean_rephrase": "apps.manifest.create 메서드는 Create an app from an app manifest. 기능을 수행합니다.",
+      "family_korean_hint": "앱 설정/연결/데이터스토어"
+    },
+    {
+      "method": "apps.manifest.delete",
+      "family": "apps",
+      "url": "https://docs.slack.dev/reference/methods/apps.manifest.delete",
+      "description": "Permanently deletes an app created through app manifests",
+      "scopes": [],
+      "korean_rephrase": "apps.manifest.delete 메서드는 Permanently deletes an app created through app manifests 기능을 수행합니다.",
+      "family_korean_hint": "앱 설정/연결/데이터스토어"
+    },
+    {
+      "method": "apps.manifest.export",
+      "family": "apps",
+      "url": "https://docs.slack.dev/reference/methods/apps.manifest.export",
+      "description": "Export an app manifest from an existing app",
+      "scopes": [],
+      "korean_rephrase": "apps.manifest.export 메서드는 Export an app manifest from an existing app 기능을 수행합니다.",
+      "family_korean_hint": "앱 설정/연결/데이터스토어"
+    },
+    {
+      "method": "apps.manifest.update",
+      "family": "apps",
+      "url": "https://docs.slack.dev/reference/methods/apps.manifest.update",
+      "description": "Update an app from an app manifest",
+      "scopes": [],
+      "korean_rephrase": "apps.manifest.update 메서드는 Update an app from an app manifest 기능을 수행합니다.",
+      "family_korean_hint": "앱 설정/연결/데이터스토어"
+    },
+    {
+      "method": "apps.manifest.validate",
+      "family": "apps",
+      "url": "https://docs.slack.dev/reference/methods/apps.manifest.validate",
+      "description": "Validate an app manifest",
+      "scopes": [],
+      "korean_rephrase": "apps.manifest.validate 메서드는 Validate an app manifest 기능을 수행합니다.",
+      "family_korean_hint": "앱 설정/연결/데이터스토어"
+    },
+    {
+      "method": "apps.uninstall",
+      "family": "apps",
+      "url": "https://docs.slack.dev/reference/methods/apps.uninstall",
+      "description": "Uninstalls your app from a workspace.",
+      "scopes": [],
+      "korean_rephrase": "apps.uninstall 메서드는 Uninstalls your app from a workspace. 기능을 수행합니다.",
+      "family_korean_hint": "앱 설정/연결/데이터스토어"
+    },
+    {
+      "method": "apps.user.connection.update",
+      "family": "apps",
+      "url": "https://docs.slack.dev/reference/methods/apps.user.connection.update",
+      "description": "Updates the connection status between a user and an app.",
+      "scopes": [
+        "users.write"
+      ],
+      "korean_rephrase": "apps.user.connection.update 메서드는 Updates the connection status between a user and an app. 기능을 수행합니다.",
+      "family_korean_hint": "앱 설정/연결/데이터스토어"
+    },
+    {
+      "method": "assistant.search.context",
+      "family": "assistant",
+      "url": "https://docs.slack.dev/reference/methods/assistant.search.context",
+      "description": "Searches messages across your Slack organization—perfect for broad, specific, and real-time data retrieval.",
+      "scopes": [
+        "search.read.files",
+        "search.read.im",
+        "search.read.mpim",
+        "search.read.private",
+        "search.read.public",
+        "search.read.users"
+      ],
+      "korean_rephrase": "assistant.search.context 메서드는 Searches messages across your Slack organization—perfect for broad, specific, and real-time data retrieval. 기능을 수행합니다.",
+      "family_korean_hint": "AI Assistant 검색/스레드 컨텍스트"
+    },
+    {
+      "method": "assistant.search.info",
+      "family": "assistant",
+      "url": "https://docs.slack.dev/reference/methods/assistant.search.info",
+      "description": "Returns search capabilities on a given team.",
+      "scopes": [
+        "search.read",
+        "search.read.public"
+      ],
+      "korean_rephrase": "assistant.search.info 메서드는 Returns search capabilities on a given team. 기능을 수행합니다.",
+      "family_korean_hint": "AI Assistant 검색/스레드 컨텍스트"
+    },
+    {
+      "method": "assistant.threads.setStatus",
+      "family": "assistant",
+      "url": "https://docs.slack.dev/reference/methods/assistant.threads.setStatus",
+      "description": "Set the status for an AI assistant thread.",
+      "scopes": [
+        "assistant.write"
+      ],
+      "korean_rephrase": "assistant.threads.setStatus 메서드는 Set the status for an AI assistant thread. 기능을 수행합니다.",
+      "family_korean_hint": "AI Assistant 검색/스레드 컨텍스트"
+    },
+    {
+      "method": "assistant.threads.setSuggestedPrompts",
+      "family": "assistant",
+      "url": "https://docs.slack.dev/reference/methods/assistant.threads.setSuggestedPrompts",
+      "description": "Set suggested prompts for the given assistant thread",
+      "scopes": [
+        "assistant.write"
+      ],
+      "korean_rephrase": "assistant.threads.setSuggestedPrompts 메서드는 Set suggested prompts for the given assistant thread 기능을 수행합니다.",
+      "family_korean_hint": "AI Assistant 검색/스레드 컨텍스트"
+    },
+    {
+      "method": "assistant.threads.setTitle",
+      "family": "assistant",
+      "url": "https://docs.slack.dev/reference/methods/assistant.threads.setTitle",
+      "description": "Set the title for the given assistant thread",
+      "scopes": [
+        "assistant.write"
+      ],
+      "korean_rephrase": "assistant.threads.setTitle 메서드는 Set the title for the given assistant thread 기능을 수행합니다.",
+      "family_korean_hint": "AI Assistant 검색/스레드 컨텍스트"
+    },
+    {
+      "method": "auth.revoke",
+      "family": "auth",
+      "url": "https://docs.slack.dev/reference/methods/auth.revoke",
+      "description": "Revokes a token.",
+      "scopes": [],
+      "korean_rephrase": "auth.revoke 메서드는 Revokes a token. 기능을 수행합니다.",
+      "family_korean_hint": "인증 테스트/취소/조회"
+    },
+    {
+      "method": "auth.teams.list",
+      "family": "auth",
+      "url": "https://docs.slack.dev/reference/methods/auth.teams.list",
+      "description": "Obtain a full list of workspaces your org-wide app has been approved for.",
+      "scopes": [],
+      "korean_rephrase": "auth.teams.list 메서드는 Obtain a full list of workspaces your org-wide app has been approved for. 기능을 수행합니다.",
+      "family_korean_hint": "인증 테스트/취소/조회"
+    },
+    {
+      "method": "auth.test",
+      "family": "auth",
+      "url": "https://docs.slack.dev/reference/methods/auth.test",
+      "description": "Checks authentication & identity.",
+      "scopes": [],
+      "korean_rephrase": "auth.test 메서드는 Checks authentication & identity. 기능을 수행합니다.",
+      "family_korean_hint": "인증 테스트/취소/조회"
+    },
+    {
+      "method": "bookmarks.add",
+      "family": "bookmarks",
+      "url": "https://docs.slack.dev/reference/methods/bookmarks.add",
+      "description": "Add bookmark to a channel.",
+      "scopes": [
+        "bookmarks.write"
+      ],
+      "korean_rephrase": "bookmarks.add 메서드는 Add bookmark to a channel. 기능을 수행합니다.",
+      "family_korean_hint": "북마크 추가/편집/삭제/조회"
+    },
+    {
+      "method": "bookmarks.edit",
+      "family": "bookmarks",
+      "url": "https://docs.slack.dev/reference/methods/bookmarks.edit",
+      "description": "Edit bookmark.",
+      "scopes": [
+        "bookmarks.write"
+      ],
+      "korean_rephrase": "bookmarks.edit 메서드는 Edit bookmark. 기능을 수행합니다.",
+      "family_korean_hint": "북마크 추가/편집/삭제/조회"
+    },
+    {
+      "method": "bookmarks.list",
+      "family": "bookmarks",
+      "url": "https://docs.slack.dev/reference/methods/bookmarks.list",
+      "description": "List bookmark for the channel.",
+      "scopes": [
+        "bookmarks.read"
+      ],
+      "korean_rephrase": "bookmarks.list 메서드는 List bookmark for the channel. 기능을 수행합니다.",
+      "family_korean_hint": "북마크 추가/편집/삭제/조회"
+    },
+    {
+      "method": "bookmarks.remove",
+      "family": "bookmarks",
+      "url": "https://docs.slack.dev/reference/methods/bookmarks.remove",
+      "description": "Remove bookmark from the channel.",
+      "scopes": [
+        "bookmarks.write"
+      ],
+      "korean_rephrase": "bookmarks.remove 메서드는 Remove bookmark from the channel. 기능을 수행합니다.",
+      "family_korean_hint": "북마크 추가/편집/삭제/조회"
+    },
+    {
+      "method": "bots.info",
+      "family": "bots",
+      "url": "https://docs.slack.dev/reference/methods/bots.info",
+      "description": "Gets information about a bot user.",
+      "scopes": [
+        "users.read"
+      ],
+      "korean_rephrase": "bots.info 메서드는 Gets information about a bot user. 기능을 수행합니다.",
+      "family_korean_hint": "해당 도메인의 Slack 기능 제어"
+    },
+    {
+      "method": "calls.add",
+      "family": "calls",
+      "url": "https://docs.slack.dev/reference/methods/calls.add",
+      "description": "Registers a new Call.",
+      "scopes": [
+        "calls.write"
+      ],
+      "korean_rephrase": "calls.add 메서드는 Registers a new Call. 기능을 수행합니다.",
+      "family_korean_hint": "콜(Call) 객체 생성/수정/종료"
+    },
+    {
+      "method": "calls.end",
+      "family": "calls",
+      "url": "https://docs.slack.dev/reference/methods/calls.end",
+      "description": "Ends a Call.",
+      "scopes": [
+        "calls.write"
+      ],
+      "korean_rephrase": "calls.end 메서드는 Ends a Call. 기능을 수행합니다.",
+      "family_korean_hint": "콜(Call) 객체 생성/수정/종료"
+    },
+    {
+      "method": "calls.info",
+      "family": "calls",
+      "url": "https://docs.slack.dev/reference/methods/calls.info",
+      "description": "Returns information about a Call.",
+      "scopes": [
+        "calls.read"
+      ],
+      "korean_rephrase": "calls.info 메서드는 Returns information about a Call. 기능을 수행합니다.",
+      "family_korean_hint": "콜(Call) 객체 생성/수정/종료"
+    },
+    {
+      "method": "calls.participants.add",
+      "family": "calls",
+      "url": "https://docs.slack.dev/reference/methods/calls.participants.add",
+      "description": "Registers new participants added to a Call.",
+      "scopes": [
+        "calls.write"
+      ],
+      "korean_rephrase": "calls.participants.add 메서드는 Registers new participants added to a Call. 기능을 수행합니다.",
+      "family_korean_hint": "콜(Call) 객체 생성/수정/종료"
+    },
+    {
+      "method": "calls.participants.remove",
+      "family": "calls",
+      "url": "https://docs.slack.dev/reference/methods/calls.participants.remove",
+      "description": "Registers participants removed from a Call.",
+      "scopes": [
+        "calls.write"
+      ],
+      "korean_rephrase": "calls.participants.remove 메서드는 Registers participants removed from a Call. 기능을 수행합니다.",
+      "family_korean_hint": "콜(Call) 객체 생성/수정/종료"
+    },
+    {
+      "method": "calls.update",
+      "family": "calls",
+      "url": "https://docs.slack.dev/reference/methods/calls.update",
+      "description": "Updates information about a Call.",
+      "scopes": [
+        "calls.write"
+      ],
+      "korean_rephrase": "calls.update 메서드는 Updates information about a Call. 기능을 수행합니다.",
+      "family_korean_hint": "콜(Call) 객체 생성/수정/종료"
+    },
+    {
+      "method": "canvases.access.delete",
+      "family": "canvases",
+      "url": "https://docs.slack.dev/reference/methods/canvases.access.delete",
+      "description": "Remove access to a canvas for specified entities",
+      "scopes": [
+        "canvases.write"
+      ],
+      "korean_rephrase": "canvases.access.delete 메서드는 Remove access to a canvas for specified entities 기능을 수행합니다.",
+      "family_korean_hint": "캔버스 생성/수정/조회/권한"
+    },
+    {
+      "method": "canvases.access.set",
+      "family": "canvases",
+      "url": "https://docs.slack.dev/reference/methods/canvases.access.set",
+      "description": "Sets the access level to a canvas for specified entities",
+      "scopes": [
+        "canvases.write"
+      ],
+      "korean_rephrase": "canvases.access.set 메서드는 Sets the access level to a canvas for specified entities 기능을 수행합니다.",
+      "family_korean_hint": "캔버스 생성/수정/조회/권한"
+    },
+    {
+      "method": "canvases.create",
+      "family": "canvases",
+      "url": "https://docs.slack.dev/reference/methods/canvases.create",
+      "description": "Create canvas for a user",
+      "scopes": [
+        "canvases.write"
+      ],
+      "korean_rephrase": "canvases.create 메서드는 Create canvas for a user 기능을 수행합니다.",
+      "family_korean_hint": "캔버스 생성/수정/조회/권한"
+    },
+    {
+      "method": "canvases.delete",
+      "family": "canvases",
+      "url": "https://docs.slack.dev/reference/methods/canvases.delete",
+      "description": "Deletes a canvas",
+      "scopes": [
+        "canvases.write"
+      ],
+      "korean_rephrase": "canvases.delete 메서드는 Deletes a canvas 기능을 수행합니다.",
+      "family_korean_hint": "캔버스 생성/수정/조회/권한"
+    },
+    {
+      "method": "canvases.edit",
+      "family": "canvases",
+      "url": "https://docs.slack.dev/reference/methods/canvases.edit",
+      "description": "Update an existing canvas",
+      "scopes": [
+        "canvases.write"
+      ],
+      "korean_rephrase": "canvases.edit 메서드는 Update an existing canvas 기능을 수행합니다.",
+      "family_korean_hint": "캔버스 생성/수정/조회/권한"
+    },
+    {
+      "method": "canvases.sections.lookup",
+      "family": "canvases",
+      "url": "https://docs.slack.dev/reference/methods/canvases.sections.lookup",
+      "description": "Find sections matching the provided criteria",
+      "scopes": [
+        "canvases.read"
+      ],
+      "korean_rephrase": "canvases.sections.lookup 메서드는 Find sections matching the provided criteria 기능을 수행합니다.",
+      "family_korean_hint": "캔버스 생성/수정/조회/권한"
+    },
+    {
+      "method": "chat.appendStream",
+      "family": "chat",
+      "url": "https://docs.slack.dev/reference/methods/chat.appendStream",
+      "description": "Append text to an existing streaming conversation",
+      "scopes": [
+        "chat.write"
+      ],
+      "korean_rephrase": "chat.appendStream 메서드는 Append text to an existing streaming conversation 기능을 수행합니다.",
+      "family_korean_hint": "메시지 전송/수정/삭제/스트리밍"
+    },
+    {
+      "method": "chat.delete",
+      "family": "chat",
+      "url": "https://docs.slack.dev/reference/methods/chat.delete",
+      "description": "Deletes a message.",
+      "scopes": [
+        "chat.write"
+      ],
+      "korean_rephrase": "chat.delete 메서드는 Deletes a message. 기능을 수행합니다.",
+      "family_korean_hint": "메시지 전송/수정/삭제/스트리밍"
+    },
+    {
+      "method": "chat.deleteScheduledMessage",
+      "family": "chat",
+      "url": "https://docs.slack.dev/reference/methods/chat.deleteScheduledMessage",
+      "description": "Deletes a pending scheduled message from the queue.",
+      "scopes": [
+        "chat.write"
+      ],
+      "korean_rephrase": "chat.deleteScheduledMessage 메서드는 Deletes a pending scheduled message from the queue. 기능을 수행합니다.",
+      "family_korean_hint": "메시지 전송/수정/삭제/스트리밍"
+    },
+    {
+      "method": "chat.getPermalink",
+      "family": "chat",
+      "url": "https://docs.slack.dev/reference/methods/chat.getPermalink",
+      "description": "Retrieve a permalink URL for a specific extant message",
+      "scopes": [],
+      "korean_rephrase": "chat.getPermalink 메서드는 Retrieve a permalink URL for a specific extant message 기능을 수행합니다.",
+      "family_korean_hint": "메시지 전송/수정/삭제/스트리밍"
+    },
+    {
+      "method": "chat.meMessage",
+      "family": "chat",
+      "url": "https://docs.slack.dev/reference/methods/chat.meMessage",
+      "description": "Share a me message into a channel.",
+      "scopes": [
+        "chat.write"
+      ],
+      "korean_rephrase": "chat.meMessage 메서드는 Share a me message into a channel. 기능을 수행합니다.",
+      "family_korean_hint": "메시지 전송/수정/삭제/스트리밍"
+    },
+    {
+      "method": "chat.postEphemeral",
+      "family": "chat",
+      "url": "https://docs.slack.dev/reference/methods/chat.postEphemeral",
+      "description": "Sends an ephemeral message to a user in a channel.",
+      "scopes": [
+        "chat.write"
+      ],
+      "korean_rephrase": "chat.postEphemeral 메서드는 Sends an ephemeral message to a user in a channel. 기능을 수행합니다.",
+      "family_korean_hint": "메시지 전송/수정/삭제/스트리밍"
+    },
+    {
+      "method": "chat.postMessage",
+      "family": "chat",
+      "url": "https://docs.slack.dev/reference/methods/chat.postMessage",
+      "description": "Sends a message to a channel.",
+      "scopes": [
+        "chat.write",
+        "chat.write.customize",
+        "chat.write.public"
+      ],
+      "korean_rephrase": "chat.postMessage 메서드는 Sends a message to a channel. 기능을 수행합니다.",
+      "family_korean_hint": "메시지 전송/수정/삭제/스트리밍"
+    },
+    {
+      "method": "chat.scheduledMessages.list",
+      "family": "chat",
+      "url": "https://docs.slack.dev/reference/methods/chat.scheduledMessages.list",
+      "description": "Returns a list of scheduled messages.",
+      "scopes": [],
+      "korean_rephrase": "chat.scheduledMessages.list 메서드는 Returns a list of scheduled messages. 기능을 수행합니다.",
+      "family_korean_hint": "메시지 전송/수정/삭제/스트리밍"
+    },
+    {
+      "method": "chat.scheduleMessage",
+      "family": "chat",
+      "url": "https://docs.slack.dev/reference/methods/chat.scheduleMessage",
+      "description": "Schedules a message to be sent to a channel.",
+      "scopes": [
+        "chat.write"
+      ],
+      "korean_rephrase": "chat.scheduleMessage 메서드는 Schedules a message to be sent to a channel. 기능을 수행합니다.",
+      "family_korean_hint": "메시지 전송/수정/삭제/스트리밍"
+    },
+    {
+      "method": "chat.startStream",
+      "family": "chat",
+      "url": "https://docs.slack.dev/reference/methods/chat.startStream",
+      "description": "Start a new streaming conversation",
+      "scopes": [
+        "chat.write"
+      ],
+      "korean_rephrase": "chat.startStream 메서드는 Start a new streaming conversation 기능을 수행합니다.",
+      "family_korean_hint": "메시지 전송/수정/삭제/스트리밍"
+    },
+    {
+      "method": "chat.stopStream",
+      "family": "chat",
+      "url": "https://docs.slack.dev/reference/methods/chat.stopStream",
+      "description": "Stop a streaming conversation",
+      "scopes": [
+        "chat.write"
+      ],
+      "korean_rephrase": "chat.stopStream 메서드는 Stop a streaming conversation 기능을 수행합니다.",
+      "family_korean_hint": "메시지 전송/수정/삭제/스트리밍"
+    },
+    {
+      "method": "chat.unfurl",
+      "family": "chat",
+      "url": "https://docs.slack.dev/reference/methods/chat.unfurl",
+      "description": "Provide custom unfurl behavior for user-posted URLs",
+      "scopes": [
+        "links.write"
+      ],
+      "korean_rephrase": "chat.unfurl 메서드는 Provide custom unfurl behavior for user-posted URLs 기능을 수행합니다.",
+      "family_korean_hint": "메시지 전송/수정/삭제/스트리밍"
+    },
+    {
+      "method": "chat.update",
+      "family": "chat",
+      "url": "https://docs.slack.dev/reference/methods/chat.update",
+      "description": "Updates a message.",
+      "scopes": [
+        "chat.write"
+      ],
+      "korean_rephrase": "chat.update 메서드는 Updates a message. 기능을 수행합니다.",
+      "family_korean_hint": "메시지 전송/수정/삭제/스트리밍"
+    },
+    {
+      "method": "conversations.acceptSharedInvite",
+      "family": "conversations",
+      "url": "https://docs.slack.dev/reference/methods/conversations.acceptSharedInvite",
+      "description": "Accepts an invitation to a Slack Connect channel.",
+      "scopes": [
+        "conversations.connect.write"
+      ],
+      "korean_rephrase": "conversations.acceptSharedInvite 메서드는 Accepts an invitation to a Slack Connect channel. 기능을 수행합니다.",
+      "family_korean_hint": "채널/대화방 생성/조회/이력/멤버"
+    },
+    {
+      "method": "conversations.approveSharedInvite",
+      "family": "conversations",
+      "url": "https://docs.slack.dev/reference/methods/conversations.approveSharedInvite",
+      "description": "Approves an invitation to a Slack Connect channel",
+      "scopes": [
+        "conversations.connect.manage"
+      ],
+      "korean_rephrase": "conversations.approveSharedInvite 메서드는 Approves an invitation to a Slack Connect channel 기능을 수행합니다.",
+      "family_korean_hint": "채널/대화방 생성/조회/이력/멤버"
+    },
+    {
+      "method": "conversations.archive",
+      "family": "conversations",
+      "url": "https://docs.slack.dev/reference/methods/conversations.archive",
+      "description": "Archives a conversation.",
+      "scopes": [
+        "channels.manage",
+        "channels.write",
+        "groups.write",
+        "im.write",
+        "mpim.write"
+      ],
+      "korean_rephrase": "conversations.archive 메서드는 Archives a conversation. 기능을 수행합니다.",
+      "family_korean_hint": "채널/대화방 생성/조회/이력/멤버"
+    },
+    {
+      "method": "conversations.canvases.create",
+      "family": "conversations",
+      "url": "https://docs.slack.dev/reference/methods/conversations.canvases.create",
+      "description": "Create a channel canvas for a channel",
+      "scopes": [
+        "canvases.write"
+      ],
+      "korean_rephrase": "conversations.canvases.create 메서드는 Create a channel canvas for a channel 기능을 수행합니다.",
+      "family_korean_hint": "채널/대화방 생성/조회/이력/멤버"
+    },
+    {
+      "method": "conversations.close",
+      "family": "conversations",
+      "url": "https://docs.slack.dev/reference/methods/conversations.close",
+      "description": "Closes a direct message or multi-person direct message.",
+      "scopes": [
+        "channels.manage",
+        "channels.write",
+        "groups.write",
+        "im.write",
+        "mpim.write"
+      ],
+      "korean_rephrase": "conversations.close 메서드는 Closes a direct message or multi-person direct message. 기능을 수행합니다.",
+      "family_korean_hint": "채널/대화방 생성/조회/이력/멤버"
+    },
+    {
+      "method": "conversations.create",
+      "family": "conversations",
+      "url": "https://docs.slack.dev/reference/methods/conversations.create",
+      "description": "Initiates a public or private channel-based conversation",
+      "scopes": [
+        "channels.manage",
+        "channels.write",
+        "groups.write",
+        "im.write",
+        "mpim.write"
+      ],
+      "korean_rephrase": "conversations.create 메서드는 Initiates a public or private channel-based conversation 기능을 수행합니다.",
+      "family_korean_hint": "채널/대화방 생성/조회/이력/멤버"
+    },
+    {
+      "method": "conversations.declineSharedInvite",
+      "family": "conversations",
+      "url": "https://docs.slack.dev/reference/methods/conversations.declineSharedInvite",
+      "description": "Declines a Slack Connect channel invite.",
+      "scopes": [
+        "conversations.connect.manage"
+      ],
+      "korean_rephrase": "conversations.declineSharedInvite 메서드는 Declines a Slack Connect channel invite. 기능을 수행합니다.",
+      "family_korean_hint": "채널/대화방 생성/조회/이력/멤버"
+    },
+    {
+      "method": "conversations.externalInvitePermissions.set",
+      "family": "conversations",
+      "url": "https://docs.slack.dev/reference/methods/conversations.externalInvitePermissions.set",
+      "description": "Upgrade or downgrade Slack Connect channel permissions between 'can post only' and 'can post and invite'.",
+      "scopes": [
+        "conversations.connect.manage"
+      ],
+      "korean_rephrase": "conversations.externalInvitePermissions.set 메서드는 Upgrade or downgrade Slack Connect channel permissions between 'can post only' and 'can post and invite'. 기능을 수행합니다.",
+      "family_korean_hint": "채널/대화방 생성/조회/이력/멤버"
+    },
+    {
+      "method": "conversations.history",
+      "family": "conversations",
+      "url": "https://docs.slack.dev/reference/methods/conversations.history",
+      "description": "Fetches a conversation's history of messages and events.",
+      "scopes": [
+        "channels.history",
+        "groups.history",
+        "im.history",
+        "mpim.history"
+      ],
+      "korean_rephrase": "conversations.history 메서드는 Fetches a conversation's history of messages and events. 기능을 수행합니다.",
+      "family_korean_hint": "채널/대화방 생성/조회/이력/멤버"
+    },
+    {
+      "method": "conversations.info",
+      "family": "conversations",
+      "url": "https://docs.slack.dev/reference/methods/conversations.info",
+      "description": "Retrieve information about a conversation.",
+      "scopes": [
+        "channels.read",
+        "groups.read",
+        "im.read",
+        "mpim.read"
+      ],
+      "korean_rephrase": "conversations.info 메서드는 Retrieve information about a conversation. 기능을 수행합니다.",
+      "family_korean_hint": "채널/대화방 생성/조회/이력/멤버"
+    },
+    {
+      "method": "conversations.invite",
+      "family": "conversations",
+      "url": "https://docs.slack.dev/reference/methods/conversations.invite",
+      "description": "Invites users to a channel.",
+      "scopes": [
+        "channels.manage",
+        "channels.write",
+        "channels.write.invites",
+        "groups.write",
+        "groups.write.invites",
+        "im.write",
+        "mpim.write"
+      ],
+      "korean_rephrase": "conversations.invite 메서드는 Invites users to a channel. 기능을 수행합니다.",
+      "family_korean_hint": "채널/대화방 생성/조회/이력/멤버"
+    },
+    {
+      "method": "conversations.inviteShared",
+      "family": "conversations",
+      "url": "https://docs.slack.dev/reference/methods/conversations.inviteShared",
+      "description": "Sends an invitation to a Slack Connect channel",
+      "scopes": [
+        "conversations.connect.write"
+      ],
+      "korean_rephrase": "conversations.inviteShared 메서드는 Sends an invitation to a Slack Connect channel 기능을 수행합니다.",
+      "family_korean_hint": "채널/대화방 생성/조회/이력/멤버"
+    },
+    {
+      "method": "conversations.join",
+      "family": "conversations",
+      "url": "https://docs.slack.dev/reference/methods/conversations.join",
+      "description": "Joins an existing conversation.",
+      "scopes": [
+        "channels.join",
+        "channels.write"
+      ],
+      "korean_rephrase": "conversations.join 메서드는 Joins an existing conversation. 기능을 수행합니다.",
+      "family_korean_hint": "채널/대화방 생성/조회/이력/멤버"
+    },
+    {
+      "method": "conversations.kick",
+      "family": "conversations",
+      "url": "https://docs.slack.dev/reference/methods/conversations.kick",
+      "description": "Removes a user from a conversation.",
+      "scopes": [
+        "channels.manage",
+        "channels.write",
+        "groups.write",
+        "im.write",
+        "mpim.write"
+      ],
+      "korean_rephrase": "conversations.kick 메서드는 Removes a user from a conversation. 기능을 수행합니다.",
+      "family_korean_hint": "채널/대화방 생성/조회/이력/멤버"
+    },
+    {
+      "method": "conversations.leave",
+      "family": "conversations",
+      "url": "https://docs.slack.dev/reference/methods/conversations.leave",
+      "description": "Leaves a conversation.",
+      "scopes": [
+        "channels.manage",
+        "channels.write",
+        "groups.write",
+        "im.write",
+        "mpim.write"
+      ],
+      "korean_rephrase": "conversations.leave 메서드는 Leaves a conversation. 기능을 수행합니다.",
+      "family_korean_hint": "채널/대화방 생성/조회/이력/멤버"
+    },
+    {
+      "method": "conversations.list",
+      "family": "conversations",
+      "url": "https://docs.slack.dev/reference/methods/conversations.list",
+      "description": "Lists all channels in a Slack team.",
+      "scopes": [
+        "channels.read",
+        "groups.read",
+        "im.read",
+        "mpim.read"
+      ],
+      "korean_rephrase": "conversations.list 메서드는 Lists all channels in a Slack team. 기능을 수행합니다.",
+      "family_korean_hint": "채널/대화방 생성/조회/이력/멤버"
+    },
+    {
+      "method": "conversations.listConnectInvites",
+      "family": "conversations",
+      "url": "https://docs.slack.dev/reference/methods/conversations.listConnectInvites",
+      "description": "Lists shared channel invites that have been generated or received but have not been approved by all parties",
+      "scopes": [
+        "conversations.connect.manage"
+      ],
+      "korean_rephrase": "conversations.listConnectInvites 메서드는 Lists shared channel invites that have been generated or received but have not been approved by all parties 기능을 수행합니다.",
+      "family_korean_hint": "채널/대화방 생성/조회/이력/멤버"
+    },
+    {
+      "method": "conversations.mark",
+      "family": "conversations",
+      "url": "https://docs.slack.dev/reference/methods/conversations.mark",
+      "description": "Sets the read cursor in a channel.",
+      "scopes": [
+        "channels.manage",
+        "channels.write",
+        "groups.write",
+        "im.write",
+        "mpim.write"
+      ],
+      "korean_rephrase": "conversations.mark 메서드는 Sets the read cursor in a channel. 기능을 수행합니다.",
+      "family_korean_hint": "채널/대화방 생성/조회/이력/멤버"
+    },
+    {
+      "method": "conversations.members",
+      "family": "conversations",
+      "url": "https://docs.slack.dev/reference/methods/conversations.members",
+      "description": "Retrieve members of a conversation.",
+      "scopes": [
+        "channels.read",
+        "groups.read",
+        "im.read",
+        "mpim.read"
+      ],
+      "korean_rephrase": "conversations.members 메서드는 Retrieve members of a conversation. 기능을 수행합니다.",
+      "family_korean_hint": "채널/대화방 생성/조회/이력/멤버"
+    },
+    {
+      "method": "conversations.open",
+      "family": "conversations",
+      "url": "https://docs.slack.dev/reference/methods/conversations.open",
+      "description": "Opens or resumes a direct message or multi-person direct message.",
+      "scopes": [
+        "channels.manage",
+        "channels.write",
+        "groups.write",
+        "im.write",
+        "mpim.write"
+      ],
+      "korean_rephrase": "conversations.open 메서드는 Opens or resumes a direct message or multi-person direct message. 기능을 수행합니다.",
+      "family_korean_hint": "채널/대화방 생성/조회/이력/멤버"
+    },
+    {
+      "method": "conversations.rename",
+      "family": "conversations",
+      "url": "https://docs.slack.dev/reference/methods/conversations.rename",
+      "description": "Renames a conversation.",
+      "scopes": [
+        "channels.manage",
+        "channels.write",
+        "groups.write",
+        "im.write",
+        "mpim.write"
+      ],
+      "korean_rephrase": "conversations.rename 메서드는 Renames a conversation. 기능을 수행합니다.",
+      "family_korean_hint": "채널/대화방 생성/조회/이력/멤버"
+    },
+    {
+      "method": "conversations.replies",
+      "family": "conversations",
+      "url": "https://docs.slack.dev/reference/methods/conversations.replies",
+      "description": "Retrieve a thread of messages posted to a conversation",
+      "scopes": [
+        "channels.history",
+        "groups.history",
+        "im.history",
+        "mpim.history"
+      ],
+      "korean_rephrase": "conversations.replies 메서드는 Retrieve a thread of messages posted to a conversation 기능을 수행합니다.",
+      "family_korean_hint": "채널/대화방 생성/조회/이력/멤버"
+    },
+    {
+      "method": "conversations.requestSharedInvite.approve",
+      "family": "conversations",
+      "url": "https://docs.slack.dev/reference/methods/conversations.requestSharedInvite.approve",
+      "description": "Approves a request to add an external user to a channel and sends them a Slack Connect invite",
+      "scopes": [
+        "conversations.connect.manage"
+      ],
+      "korean_rephrase": "conversations.requestSharedInvite.approve 메서드는 Approves a request to add an external user to a channel and sends them a Slack Connect invite 기능을 수행합니다.",
+      "family_korean_hint": "채널/대화방 생성/조회/이력/멤버"
+    },
+    {
+      "method": "conversations.requestSharedInvite.deny",
+      "family": "conversations",
+      "url": "https://docs.slack.dev/reference/methods/conversations.requestSharedInvite.deny",
+      "description": "Denies a request to invite an external user to a channel",
+      "scopes": [
+        "conversations.connect.manage"
+      ],
+      "korean_rephrase": "conversations.requestSharedInvite.deny 메서드는 Denies a request to invite an external user to a channel 기능을 수행합니다.",
+      "family_korean_hint": "채널/대화방 생성/조회/이력/멤버"
+    },
+    {
+      "method": "conversations.requestSharedInvite.list",
+      "family": "conversations",
+      "url": "https://docs.slack.dev/reference/methods/conversations.requestSharedInvite.list",
+      "description": "Lists requests to add external users to channels with ability to filter.",
+      "scopes": [
+        "conversations.connect.manage"
+      ],
+      "korean_rephrase": "conversations.requestSharedInvite.list 메서드는 Lists requests to add external users to channels with ability to filter. 기능을 수행합니다.",
+      "family_korean_hint": "채널/대화방 생성/조회/이력/멤버"
+    },
+    {
+      "method": "conversations.setPurpose",
+      "family": "conversations",
+      "url": "https://docs.slack.dev/reference/methods/conversations.setPurpose",
+      "description": "Sets the channel description.",
+      "scopes": [
+        "channels.manage",
+        "channels.write",
+        "channels.write.topic",
+        "groups.write",
+        "groups.write.topic",
+        "im.write",
+        "im.write.topic",
+        "mpim.write",
+        "mpim.write.topic"
+      ],
+      "korean_rephrase": "conversations.setPurpose 메서드는 Sets the channel description. 기능을 수행합니다.",
+      "family_korean_hint": "채널/대화방 생성/조회/이력/멤버"
+    },
+    {
+      "method": "conversations.setTopic",
+      "family": "conversations",
+      "url": "https://docs.slack.dev/reference/methods/conversations.setTopic",
+      "description": "Sets the topic for a conversation.",
+      "scopes": [
+        "channels.manage",
+        "channels.write",
+        "channels.write.topic",
+        "groups.write",
+        "groups.write.topic",
+        "im.write",
+        "im.write.topic",
+        "mpim.write",
+        "mpim.write.topic"
+      ],
+      "korean_rephrase": "conversations.setTopic 메서드는 Sets the topic for a conversation. 기능을 수행합니다.",
+      "family_korean_hint": "채널/대화방 생성/조회/이력/멤버"
+    },
+    {
+      "method": "conversations.unarchive",
+      "family": "conversations",
+      "url": "https://docs.slack.dev/reference/methods/conversations.unarchive",
+      "description": "Reverses conversation archival.",
+      "scopes": [
+        "channels.manage",
+        "channels.write",
+        "groups.write",
+        "im.write",
+        "mpim.write"
+      ],
+      "korean_rephrase": "conversations.unarchive 메서드는 Reverses conversation archival. 기능을 수행합니다.",
+      "family_korean_hint": "채널/대화방 생성/조회/이력/멤버"
+    },
+    {
+      "method": "dialog.open",
+      "family": "dialog",
+      "url": "https://docs.slack.dev/reference/methods/dialog.open",
+      "description": "Open a dialog with a user",
+      "scopes": [],
+      "korean_rephrase": "dialog.open 메서드는 Open a dialog with a user 기능을 수행합니다.",
+      "family_korean_hint": "해당 도메인의 Slack 기능 제어"
+    },
+    {
+      "method": "dnd.endDnd",
+      "family": "dnd",
+      "url": "https://docs.slack.dev/reference/methods/dnd.endDnd",
+      "description": "Ends the current user's Do Not Disturb session immediately.",
+      "scopes": [
+        "dnd.write"
+      ],
+      "korean_rephrase": "dnd.endDnd 메서드는 Ends the current user's Do Not Disturb session immediately. 기능을 수행합니다.",
+      "family_korean_hint": "방해금지 상태 조회/설정"
+    },
+    {
+      "method": "dnd.endSnooze",
+      "family": "dnd",
+      "url": "https://docs.slack.dev/reference/methods/dnd.endSnooze",
+      "description": "Ends the current user's snooze mode immediately.",
+      "scopes": [
+        "dnd.write"
+      ],
+      "korean_rephrase": "dnd.endSnooze 메서드는 Ends the current user's snooze mode immediately. 기능을 수행합니다.",
+      "family_korean_hint": "방해금지 상태 조회/설정"
+    },
+    {
+      "method": "dnd.info",
+      "family": "dnd",
+      "url": "https://docs.slack.dev/reference/methods/dnd.info",
+      "description": "Retrieves a user's current Do Not Disturb status.",
+      "scopes": [
+        "dnd.read"
+      ],
+      "korean_rephrase": "dnd.info 메서드는 Retrieves a user's current Do Not Disturb status. 기능을 수행합니다.",
+      "family_korean_hint": "방해금지 상태 조회/설정"
+    },
+    {
+      "method": "dnd.setSnooze",
+      "family": "dnd",
+      "url": "https://docs.slack.dev/reference/methods/dnd.setSnooze",
+      "description": "Turns on Do Not Disturb mode for the current user, or changes its duration.",
+      "scopes": [
+        "dnd.write"
+      ],
+      "korean_rephrase": "dnd.setSnooze 메서드는 Turns on Do Not Disturb mode for the current user, or changes its duration. 기능을 수행합니다.",
+      "family_korean_hint": "방해금지 상태 조회/설정"
+    },
+    {
+      "method": "dnd.teamInfo",
+      "family": "dnd",
+      "url": "https://docs.slack.dev/reference/methods/dnd.teamInfo",
+      "description": "Retrieves the Do Not Disturb status for up to 50 users on a team.",
+      "scopes": [
+        "dnd.read"
+      ],
+      "korean_rephrase": "dnd.teamInfo 메서드는 Retrieves the Do Not Disturb status for up to 50 users on a team. 기능을 수행합니다.",
+      "family_korean_hint": "방해금지 상태 조회/설정"
+    },
+    {
+      "method": "emoji.list",
+      "family": "emoji",
+      "url": "https://docs.slack.dev/reference/methods/emoji.list",
+      "description": "Lists custom emoji for a team.",
+      "scopes": [
+        "emoji.read"
+      ],
+      "korean_rephrase": "emoji.list 메서드는 Lists custom emoji for a team. 기능을 수행합니다.",
+      "family_korean_hint": "해당 도메인의 Slack 기능 제어"
+    },
+    {
+      "method": "entity.presentDetails",
+      "family": "entity",
+      "url": "https://docs.slack.dev/reference/methods/entity.presentDetails",
+      "description": "Provide custom flexpane behavior for Work Objects. Apps call this method to send per-user flexpane metadata to the client.",
+      "scopes": [],
+      "korean_rephrase": "entity.presentDetails 메서드는 Provide custom flexpane behavior for Work Objects. Apps call this method to send per-user flexpane metadata to the client. 기능을 수행합니다.",
+      "family_korean_hint": "해당 도메인의 Slack 기능 제어"
+    },
+    {
+      "method": "files.comments.delete",
+      "family": "files",
+      "url": "https://docs.slack.dev/reference/methods/files.comments.delete",
+      "description": "Deletes an existing comment on a file.",
+      "scopes": [
+        "files.write"
+      ],
+      "korean_rephrase": "files.comments.delete 메서드는 Deletes an existing comment on a file. 기능을 수행합니다.",
+      "family_korean_hint": "파일 업로드/조회/공유/삭제"
+    },
+    {
+      "method": "files.completeUploadExternal",
+      "family": "files",
+      "url": "https://docs.slack.dev/reference/methods/files.completeUploadExternal",
+      "description": "Finishes an upload started with files.getUploadURLExternal",
+      "scopes": [
+        "files.write"
+      ],
+      "korean_rephrase": "files.completeUploadExternal 메서드는 Finishes an upload started with files.getUploadURLExternal 기능을 수행합니다.",
+      "family_korean_hint": "파일 업로드/조회/공유/삭제"
+    },
+    {
+      "method": "files.delete",
+      "family": "files",
+      "url": "https://docs.slack.dev/reference/methods/files.delete",
+      "description": "Deletes a file.",
+      "scopes": [
+        "files.write"
+      ],
+      "korean_rephrase": "files.delete 메서드는 Deletes a file. 기능을 수행합니다.",
+      "family_korean_hint": "파일 업로드/조회/공유/삭제"
+    },
+    {
+      "method": "files.getUploadURLExternal",
+      "family": "files",
+      "url": "https://docs.slack.dev/reference/methods/files.getUploadURLExternal",
+      "description": "Gets a URL for an edge external file upload",
+      "scopes": [
+        "files.write"
+      ],
+      "korean_rephrase": "files.getUploadURLExternal 메서드는 Gets a URL for an edge external file upload 기능을 수행합니다.",
+      "family_korean_hint": "파일 업로드/조회/공유/삭제"
+    },
+    {
+      "method": "files.info",
+      "family": "files",
+      "url": "https://docs.slack.dev/reference/methods/files.info",
+      "description": "Gets information about a file.",
+      "scopes": [
+        "files.read"
+      ],
+      "korean_rephrase": "files.info 메서드는 Gets information about a file. 기능을 수행합니다.",
+      "family_korean_hint": "파일 업로드/조회/공유/삭제"
+    },
+    {
+      "method": "files.list",
+      "family": "files",
+      "url": "https://docs.slack.dev/reference/methods/files.list",
+      "description": "List for a team, in a channel, or from a user with applied filters.",
+      "scopes": [
+        "files.read"
+      ],
+      "korean_rephrase": "files.list 메서드는 List for a team, in a channel, or from a user with applied filters. 기능을 수행합니다.",
+      "family_korean_hint": "파일 업로드/조회/공유/삭제"
+    },
+    {
+      "method": "files.remote.add",
+      "family": "files",
+      "url": "https://docs.slack.dev/reference/methods/files.remote.add",
+      "description": "Adds a file from a remote service",
+      "scopes": [
+        "bot",
+        "remote_files.write"
+      ],
+      "korean_rephrase": "files.remote.add 메서드는 Adds a file from a remote service 기능을 수행합니다.",
+      "family_korean_hint": "파일 업로드/조회/공유/삭제"
+    },
+    {
+      "method": "files.remote.info",
+      "family": "files",
+      "url": "https://docs.slack.dev/reference/methods/files.remote.info",
+      "description": "Retrieve information about a remote file added to Slack",
+      "scopes": [
+        "remote_files.read"
+      ],
+      "korean_rephrase": "files.remote.info 메서드는 Retrieve information about a remote file added to Slack 기능을 수행합니다.",
+      "family_korean_hint": "파일 업로드/조회/공유/삭제"
+    },
+    {
+      "method": "files.remote.list",
+      "family": "files",
+      "url": "https://docs.slack.dev/reference/methods/files.remote.list",
+      "description": "Retrieve information about a remote file added to Slack",
+      "scopes": [
+        "remote_files.read"
+      ],
+      "korean_rephrase": "files.remote.list 메서드는 Retrieve information about a remote file added to Slack 기능을 수행합니다.",
+      "family_korean_hint": "파일 업로드/조회/공유/삭제"
+    },
+    {
+      "method": "files.remote.remove",
+      "family": "files",
+      "url": "https://docs.slack.dev/reference/methods/files.remote.remove",
+      "description": "Remove a remote file.",
+      "scopes": [
+        "remote_files.write"
+      ],
+      "korean_rephrase": "files.remote.remove 메서드는 Remove a remote file. 기능을 수행합니다.",
+      "family_korean_hint": "파일 업로드/조회/공유/삭제"
+    },
+    {
+      "method": "files.remote.share",
+      "family": "files",
+      "url": "https://docs.slack.dev/reference/methods/files.remote.share",
+      "description": "Share a remote file into a channel.",
+      "scopes": [
+        "remote_files.share"
+      ],
+      "korean_rephrase": "files.remote.share 메서드는 Share a remote file into a channel. 기능을 수행합니다.",
+      "family_korean_hint": "파일 업로드/조회/공유/삭제"
+    },
+    {
+      "method": "files.remote.update",
+      "family": "files",
+      "url": "https://docs.slack.dev/reference/methods/files.remote.update",
+      "description": "Updates an existing remote file.",
+      "scopes": [
+        "remote_files.write"
+      ],
+      "korean_rephrase": "files.remote.update 메서드는 Updates an existing remote file. 기능을 수행합니다.",
+      "family_korean_hint": "파일 업로드/조회/공유/삭제"
+    },
+    {
+      "method": "files.revokePublicURL",
+      "family": "files",
+      "url": "https://docs.slack.dev/reference/methods/files.revokePublicURL",
+      "description": "Revokes public/external sharing access for a file",
+      "scopes": [
+        "files.write"
+      ],
+      "korean_rephrase": "files.revokePublicURL 메서드는 Revokes public/external sharing access for a file 기능을 수행합니다.",
+      "family_korean_hint": "파일 업로드/조회/공유/삭제"
+    },
+    {
+      "method": "files.sharedPublicURL",
+      "family": "files",
+      "url": "https://docs.slack.dev/reference/methods/files.sharedPublicURL",
+      "description": "Enables a file for public/external sharing.",
+      "scopes": [
+        "files.write"
+      ],
+      "korean_rephrase": "files.sharedPublicURL 메서드는 Enables a file for public/external sharing. 기능을 수행합니다.",
+      "family_korean_hint": "파일 업로드/조회/공유/삭제"
+    },
+    {
+      "method": "files.upload",
+      "family": "files",
+      "url": "https://docs.slack.dev/reference/methods/files.upload",
+      "description": "Uploads or creates a file.",
+      "scopes": [
+        "files.write"
+      ],
+      "korean_rephrase": "files.upload 메서드는 Uploads or creates a file. 기능을 수행합니다.",
+      "family_korean_hint": "파일 업로드/조회/공유/삭제"
+    },
+    {
+      "method": "functions.completeError",
+      "family": "functions",
+      "url": "https://docs.slack.dev/reference/methods/functions.completeError",
+      "description": "Signal that a function failed to complete",
+      "scopes": [],
+      "korean_rephrase": "functions.completeError 메서드는 Signal that a function failed to complete 기능을 수행합니다.",
+      "family_korean_hint": "해당 도메인의 Slack 기능 제어"
+    },
+    {
+      "method": "functions.completeSuccess",
+      "family": "functions",
+      "url": "https://docs.slack.dev/reference/methods/functions.completeSuccess",
+      "description": "Signal the successful completion of a function",
+      "scopes": [],
+      "korean_rephrase": "functions.completeSuccess 메서드는 Signal the successful completion of a function 기능을 수행합니다.",
+      "family_korean_hint": "해당 도메인의 Slack 기능 제어"
+    },
+    {
+      "method": "functions.distributions.permissions.add",
+      "family": "functions",
+      "url": "https://docs.slack.dev/reference/methods/functions.distributions.permissions.add",
+      "description": "Grant users access to a custom slack function if its permission_type is set to named_entities",
+      "scopes": [],
+      "korean_rephrase": "functions.distributions.permissions.add 메서드는 Grant users access to a custom slack function if its permission_type is set to named_entities 기능을 수행합니다.",
+      "family_korean_hint": "해당 도메인의 Slack 기능 제어"
+    },
+    {
+      "method": "functions.distributions.permissions.list",
+      "family": "functions",
+      "url": "https://docs.slack.dev/reference/methods/functions.distributions.permissions.list",
+      "description": "List the access type of a custom slack function and include the users, team or org ids with access if its permission_type is set to named_entities",
+      "scopes": [],
+      "korean_rephrase": "functions.distributions.permissions.list 메서드는 List the access type of a custom slack function and include the users, team or org ids with access if its permission_type is set to named_entities 기능을 수행합니다.",
+      "family_korean_hint": "해당 도메인의 Slack 기능 제어"
+    },
+    {
+      "method": "functions.distributions.permissions.remove",
+      "family": "functions",
+      "url": "https://docs.slack.dev/reference/methods/functions.distributions.permissions.remove",
+      "description": "Revoke user access to a custom slack function if permission_type set to named_entities",
+      "scopes": [],
+      "korean_rephrase": "functions.distributions.permissions.remove 메서드는 Revoke user access to a custom slack function if permission_type set to named_entities 기능을 수행합니다.",
+      "family_korean_hint": "해당 도메인의 Slack 기능 제어"
+    },
+    {
+      "method": "functions.distributions.permissions.set",
+      "family": "functions",
+      "url": "https://docs.slack.dev/reference/methods/functions.distributions.permissions.set",
+      "description": "Set the access type of a custom slack function and define the users, team or org ids to be granted access if permission_type is set to named_entities",
+      "scopes": [],
+      "korean_rephrase": "functions.distributions.permissions.set 메서드는 Set the access type of a custom slack function and define the users, team or org ids to be granted access if permission_type is set to named_entities 기능을 수행합니다.",
+      "family_korean_hint": "해당 도메인의 Slack 기능 제어"
+    },
+    {
+      "method": "functions.workflows.steps.list",
+      "family": "functions",
+      "url": "https://docs.slack.dev/reference/methods/functions.workflows.steps.list",
+      "description": "List the steps of a specific function of a workflow's versions",
+      "scopes": [],
+      "korean_rephrase": "functions.workflows.steps.list 메서드는 List the steps of a specific function of a workflow's versions 기능을 수행합니다.",
+      "family_korean_hint": "해당 도메인의 Slack 기능 제어"
+    },
+    {
+      "method": "functions.workflows.steps.responses.export",
+      "family": "functions",
+      "url": "https://docs.slack.dev/reference/methods/functions.workflows.steps.responses.export",
+      "description": "Download form responses of a workflow",
+      "scopes": [],
+      "korean_rephrase": "functions.workflows.steps.responses.export 메서드는 Download form responses of a workflow 기능을 수행합니다.",
+      "family_korean_hint": "해당 도메인의 Slack 기능 제어"
+    },
+    {
+      "method": "migration.exchange",
+      "family": "migration",
+      "url": "https://docs.slack.dev/reference/methods/migration.exchange",
+      "description": "For Enterprise organization workspaces, map local user IDs to global user IDs",
+      "scopes": [
+        "tokens.basic"
+      ],
+      "korean_rephrase": "migration.exchange 메서드는 For Enterprise organization workspaces, map local user IDs to global user IDs 기능을 수행합니다.",
+      "family_korean_hint": "해당 도메인의 Slack 기능 제어"
+    },
+    {
+      "method": "oauth.access",
+      "family": "oauth",
+      "url": "https://docs.slack.dev/reference/methods/oauth.access",
+      "description": "Exchanges a temporary OAuth verifier code for an access token.",
+      "scopes": [],
+      "korean_rephrase": "oauth.access 메서드는 Exchanges a temporary OAuth verifier code for an access token. 기능을 수행합니다.",
+      "family_korean_hint": "OAuth 토큰/교환"
+    },
+    {
+      "method": "oauth.v2.access",
+      "family": "oauth",
+      "url": "https://docs.slack.dev/reference/methods/oauth.v2.access",
+      "description": "Exchanges a temporary OAuth verifier code for an access token.",
+      "scopes": [],
+      "korean_rephrase": "oauth.v2.access 메서드는 Exchanges a temporary OAuth verifier code for an access token. 기능을 수행합니다.",
+      "family_korean_hint": "OAuth 토큰/교환"
+    },
+    {
+      "method": "oauth.v2.exchange",
+      "family": "oauth",
+      "url": "https://docs.slack.dev/reference/methods/oauth.v2.exchange",
+      "description": "Exchanges a legacy access token for a new expiring access token and refresh token",
+      "scopes": [],
+      "korean_rephrase": "oauth.v2.exchange 메서드는 Exchanges a legacy access token for a new expiring access token and refresh token 기능을 수행합니다.",
+      "family_korean_hint": "OAuth 토큰/교환"
+    },
+    {
+      "method": "oauth.v2.user.access",
+      "family": "oauth",
+      "url": "https://docs.slack.dev/reference/methods/oauth.v2.user.access",
+      "description": "Exchanges a temporary OAuth verifier code for a user access token.",
+      "scopes": [],
+      "korean_rephrase": "oauth.v2.user.access 메서드는 Exchanges a temporary OAuth verifier code for a user access token. 기능을 수행합니다.",
+      "family_korean_hint": "OAuth 토큰/교환"
+    },
+    {
+      "method": "openid.connect.token",
+      "family": "openid",
+      "url": "https://docs.slack.dev/reference/methods/openid.connect.token",
+      "description": "Exchanges a temporary OAuth verifier code for an access token for Sign in with Slack.",
+      "scopes": [],
+      "korean_rephrase": "openid.connect.token 메서드는 Exchanges a temporary OAuth verifier code for an access token for Sign in with Slack. 기능을 수행합니다.",
+      "family_korean_hint": "해당 도메인의 Slack 기능 제어"
+    },
+    {
+      "method": "openid.connect.userInfo",
+      "family": "openid",
+      "url": "https://docs.slack.dev/reference/methods/openid.connect.userInfo",
+      "description": "Get the identity of a user who has authorized Sign in with Slack.",
+      "scopes": [
+        "openid"
+      ],
+      "korean_rephrase": "openid.connect.userInfo 메서드는 Get the identity of a user who has authorized Sign in with Slack. 기능을 수행합니다.",
+      "family_korean_hint": "해당 도메인의 Slack 기능 제어"
+    },
+    {
+      "method": "pins.add",
+      "family": "pins",
+      "url": "https://docs.slack.dev/reference/methods/pins.add",
+      "description": "Pins an item to a channel.",
+      "scopes": [
+        "pins.write"
+      ],
+      "korean_rephrase": "pins.add 메서드는 Pins an item to a channel. 기능을 수행합니다.",
+      "family_korean_hint": "해당 도메인의 Slack 기능 제어"
+    },
+    {
+      "method": "pins.list",
+      "family": "pins",
+      "url": "https://docs.slack.dev/reference/methods/pins.list",
+      "description": "Lists items pinned to a channel.",
+      "scopes": [
+        "pins.read"
+      ],
+      "korean_rephrase": "pins.list 메서드는 Lists items pinned to a channel. 기능을 수행합니다.",
+      "family_korean_hint": "해당 도메인의 Slack 기능 제어"
+    },
+    {
+      "method": "pins.remove",
+      "family": "pins",
+      "url": "https://docs.slack.dev/reference/methods/pins.remove",
+      "description": "Un-pins an item from a channel.",
+      "scopes": [
+        "pins.write"
+      ],
+      "korean_rephrase": "pins.remove 메서드는 Un-pins an item from a channel. 기능을 수행합니다.",
+      "family_korean_hint": "해당 도메인의 Slack 기능 제어"
+    },
+    {
+      "method": "reactions.add",
+      "family": "reactions",
+      "url": "https://docs.slack.dev/reference/methods/reactions.add",
+      "description": "Adds a reaction to an item.",
+      "scopes": [
+        "reactions.write"
+      ],
+      "korean_rephrase": "reactions.add 메서드는 Adds a reaction to an item. 기능을 수행합니다.",
+      "family_korean_hint": "리액션 추가/삭제"
+    },
+    {
+      "method": "reactions.get",
+      "family": "reactions",
+      "url": "https://docs.slack.dev/reference/methods/reactions.get",
+      "description": "Gets reactions for an item.",
+      "scopes": [
+        "reactions.read"
+      ],
+      "korean_rephrase": "reactions.get 메서드는 Gets reactions for an item. 기능을 수행합니다.",
+      "family_korean_hint": "리액션 추가/삭제"
+    },
+    {
+      "method": "reactions.list",
+      "family": "reactions",
+      "url": "https://docs.slack.dev/reference/methods/reactions.list",
+      "description": "Lists reactions made by a user.",
+      "scopes": [
+        "reactions.read"
+      ],
+      "korean_rephrase": "reactions.list 메서드는 Lists reactions made by a user. 기능을 수행합니다.",
+      "family_korean_hint": "리액션 추가/삭제"
+    },
+    {
+      "method": "reactions.remove",
+      "family": "reactions",
+      "url": "https://docs.slack.dev/reference/methods/reactions.remove",
+      "description": "Removes a reaction from an item.",
+      "scopes": [
+        "reactions.write"
+      ],
+      "korean_rephrase": "reactions.remove 메서드는 Removes a reaction from an item. 기능을 수행합니다.",
+      "family_korean_hint": "리액션 추가/삭제"
+    },
+    {
+      "method": "reminders.add",
+      "family": "reminders",
+      "url": "https://docs.slack.dev/reference/methods/reminders.add",
+      "description": "Creates a reminder.",
+      "scopes": [
+        "reminders.write"
+      ],
+      "korean_rephrase": "reminders.add 메서드는 Creates a reminder. 기능을 수행합니다.",
+      "family_korean_hint": "리마인더 생성/조회/완료"
+    },
+    {
+      "method": "reminders.complete",
+      "family": "reminders",
+      "url": "https://docs.slack.dev/reference/methods/reminders.complete",
+      "description": "Marks a reminder as complete.",
+      "scopes": [
+        "reminders.write"
+      ],
+      "korean_rephrase": "reminders.complete 메서드는 Marks a reminder as complete. 기능을 수행합니다.",
+      "family_korean_hint": "리마인더 생성/조회/완료"
+    },
+    {
+      "method": "reminders.delete",
+      "family": "reminders",
+      "url": "https://docs.slack.dev/reference/methods/reminders.delete",
+      "description": "Deletes a reminder.",
+      "scopes": [
+        "reminders.write"
+      ],
+      "korean_rephrase": "reminders.delete 메서드는 Deletes a reminder. 기능을 수행합니다.",
+      "family_korean_hint": "리마인더 생성/조회/완료"
+    },
+    {
+      "method": "reminders.info",
+      "family": "reminders",
+      "url": "https://docs.slack.dev/reference/methods/reminders.info",
+      "description": "Gets information about a reminder.",
+      "scopes": [
+        "reminders.read"
+      ],
+      "korean_rephrase": "reminders.info 메서드는 Gets information about a reminder. 기능을 수행합니다.",
+      "family_korean_hint": "리마인더 생성/조회/완료"
+    },
+    {
+      "method": "reminders.list",
+      "family": "reminders",
+      "url": "https://docs.slack.dev/reference/methods/reminders.list",
+      "description": "Lists all reminders created by or for a given user.",
+      "scopes": [
+        "reminders.read"
+      ],
+      "korean_rephrase": "reminders.list 메서드는 Lists all reminders created by or for a given user. 기능을 수행합니다.",
+      "family_korean_hint": "리마인더 생성/조회/완료"
+    },
+    {
+      "method": "rtm.connect",
+      "family": "rtm",
+      "url": "https://docs.slack.dev/reference/methods/rtm.connect",
+      "description": "Starts a Real Time Messaging session.",
+      "scopes": [],
+      "korean_rephrase": "rtm.connect 메서드는 Starts a Real Time Messaging session. 기능을 수행합니다.",
+      "family_korean_hint": "해당 도메인의 Slack 기능 제어"
+    },
+    {
+      "method": "rtm.start",
+      "family": "rtm",
+      "url": "https://docs.slack.dev/reference/methods/rtm.start",
+      "description": "Deprecated: Starts a Real Time Messaging session. Use rtm.connect instead.",
+      "scopes": [],
+      "korean_rephrase": "rtm.start 메서드는 Deprecated: Starts a Real Time Messaging session. Use rtm.connect instead. 기능을 수행합니다.",
+      "family_korean_hint": "해당 도메인의 Slack 기능 제어"
+    },
+    {
+      "method": "search.all",
+      "family": "search",
+      "url": "https://docs.slack.dev/reference/methods/search.all",
+      "description": "Searches for messages and files matching a query.",
+      "scopes": [
+        "search.read"
+      ],
+      "korean_rephrase": "search.all 메서드는 Searches for messages and files matching a query. 기능을 수행합니다.",
+      "family_korean_hint": "검색(메시지/파일/전체)"
+    },
+    {
+      "method": "search.files",
+      "family": "search",
+      "url": "https://docs.slack.dev/reference/methods/search.files",
+      "description": "Searches for files matching a query.",
+      "scopes": [
+        "search.read"
+      ],
+      "korean_rephrase": "search.files 메서드는 Searches for files matching a query. 기능을 수행합니다.",
+      "family_korean_hint": "검색(메시지/파일/전체)"
+    },
+    {
+      "method": "search.messages",
+      "family": "search",
+      "url": "https://docs.slack.dev/reference/methods/search.messages",
+      "description": "Searches for messages matching a query.",
+      "scopes": [
+        "search.read"
+      ],
+      "korean_rephrase": "search.messages 메서드는 Searches for messages matching a query. 기능을 수행합니다.",
+      "family_korean_hint": "검색(메시지/파일/전체)"
+    },
+    {
+      "method": "slackLists.access.delete",
+      "family": "slackLists",
+      "url": "https://docs.slack.dev/reference/methods/slackLists.access.delete",
+      "description": "Revoke access to a List for specified entities.",
+      "scopes": [
+        "lists.write"
+      ],
+      "korean_rephrase": "slackLists.access.delete 메서드는 Revoke access to a List for specified entities. 기능을 수행합니다.",
+      "family_korean_hint": "해당 도메인의 Slack 기능 제어"
+    },
+    {
+      "method": "slackLists.access.set",
+      "family": "slackLists",
+      "url": "https://docs.slack.dev/reference/methods/slackLists.access.set",
+      "description": "Set the access level to a List for specified entities.",
+      "scopes": [
+        "lists.write"
+      ],
+      "korean_rephrase": "slackLists.access.set 메서드는 Set the access level to a List for specified entities. 기능을 수행합니다.",
+      "family_korean_hint": "해당 도메인의 Slack 기능 제어"
+    },
+    {
+      "method": "slackLists.create",
+      "family": "slackLists",
+      "url": "https://docs.slack.dev/reference/methods/slackLists.create",
+      "description": "Create a List.",
+      "scopes": [
+        "lists.write"
+      ],
+      "korean_rephrase": "slackLists.create 메서드는 Create a List. 기능을 수행합니다.",
+      "family_korean_hint": "해당 도메인의 Slack 기능 제어"
+    },
+    {
+      "method": "slackLists.download.get",
+      "family": "slackLists",
+      "url": "https://docs.slack.dev/reference/methods/slackLists.download.get",
+      "description": "Retrieve List download URL from an export job to download List contents.",
+      "scopes": [
+        "lists.read"
+      ],
+      "korean_rephrase": "slackLists.download.get 메서드는 Retrieve List download URL from an export job to download List contents. 기능을 수행합니다.",
+      "family_korean_hint": "해당 도메인의 Slack 기능 제어"
+    },
+    {
+      "method": "slackLists.download.start",
+      "family": "slackLists",
+      "url": "https://docs.slack.dev/reference/methods/slackLists.download.start",
+      "description": "Initiate a job to export List contents.",
+      "scopes": [
+        "lists.read"
+      ],
+      "korean_rephrase": "slackLists.download.start 메서드는 Initiate a job to export List contents. 기능을 수행합니다.",
+      "family_korean_hint": "해당 도메인의 Slack 기능 제어"
+    },
+    {
+      "method": "slackLists.items.create",
+      "family": "slackLists",
+      "url": "https://docs.slack.dev/reference/methods/slackLists.items.create",
+      "description": "Add a new item to an existing List.",
+      "scopes": [
+        "lists.write"
+      ],
+      "korean_rephrase": "slackLists.items.create 메서드는 Add a new item to an existing List. 기능을 수행합니다.",
+      "family_korean_hint": "해당 도메인의 Slack 기능 제어"
+    },
+    {
+      "method": "slackLists.items.delete",
+      "family": "slackLists",
+      "url": "https://docs.slack.dev/reference/methods/slackLists.items.delete",
+      "description": "Deletes an item from an existing List.",
+      "scopes": [
+        "lists.write"
+      ],
+      "korean_rephrase": "slackLists.items.delete 메서드는 Deletes an item from an existing List. 기능을 수행합니다.",
+      "family_korean_hint": "해당 도메인의 Slack 기능 제어"
+    },
+    {
+      "method": "slackLists.items.deleteMultiple",
+      "family": "slackLists",
+      "url": "https://docs.slack.dev/reference/methods/slackLists.items.deleteMultiple",
+      "description": "Deletes multiple items from an existing List.",
+      "scopes": [
+        "lists.write"
+      ],
+      "korean_rephrase": "slackLists.items.deleteMultiple 메서드는 Deletes multiple items from an existing List. 기능을 수행합니다.",
+      "family_korean_hint": "해당 도메인의 Slack 기능 제어"
+    },
+    {
+      "method": "slackLists.items.info",
+      "family": "slackLists",
+      "url": "https://docs.slack.dev/reference/methods/slackLists.items.info",
+      "description": "Get a row from a List.",
+      "scopes": [
+        "lists.read"
+      ],
+      "korean_rephrase": "slackLists.items.info 메서드는 Get a row from a List. 기능을 수행합니다.",
+      "family_korean_hint": "해당 도메인의 Slack 기능 제어"
+    },
+    {
+      "method": "slackLists.items.list",
+      "family": "slackLists",
+      "url": "https://docs.slack.dev/reference/methods/slackLists.items.list",
+      "description": "Get records from a List.",
+      "scopes": [
+        "lists.read"
+      ],
+      "korean_rephrase": "slackLists.items.list 메서드는 Get records from a List. 기능을 수행합니다.",
+      "family_korean_hint": "해당 도메인의 Slack 기능 제어"
+    },
+    {
+      "method": "slackLists.items.update",
+      "family": "slackLists",
+      "url": "https://docs.slack.dev/reference/methods/slackLists.items.update",
+      "description": "Updates cells in a List.",
+      "scopes": [
+        "lists.write"
+      ],
+      "korean_rephrase": "slackLists.items.update 메서드는 Updates cells in a List. 기능을 수행합니다.",
+      "family_korean_hint": "해당 도메인의 Slack 기능 제어"
+    },
+    {
+      "method": "slackLists.update",
+      "family": "slackLists",
+      "url": "https://docs.slack.dev/reference/methods/slackLists.update",
+      "description": "Update a List.",
+      "scopes": [
+        "lists.write"
+      ],
+      "korean_rephrase": "slackLists.update 메서드는 Update a List. 기능을 수행합니다.",
+      "family_korean_hint": "해당 도메인의 Slack 기능 제어"
+    },
+    {
+      "method": "stars.add",
+      "family": "stars",
+      "url": "https://docs.slack.dev/reference/methods/stars.add",
+      "description": "Save an item for later. Formerly known as adding a star.",
+      "scopes": [
+        "stars.write"
+      ],
+      "korean_rephrase": "stars.add 메서드는 Save an item for later. Formerly known as adding a star. 기능을 수행합니다.",
+      "family_korean_hint": "해당 도메인의 Slack 기능 제어"
+    },
+    {
+      "method": "stars.list",
+      "family": "stars",
+      "url": "https://docs.slack.dev/reference/methods/stars.list",
+      "description": "Listed a user's saved items, formerly known as stars.",
+      "scopes": [
+        "stars.read"
+      ],
+      "korean_rephrase": "stars.list 메서드는 Listed a user's saved items, formerly known as stars. 기능을 수행합니다.",
+      "family_korean_hint": "해당 도메인의 Slack 기능 제어"
+    },
+    {
+      "method": "stars.remove",
+      "family": "stars",
+      "url": "https://docs.slack.dev/reference/methods/stars.remove",
+      "description": "Removes a saved item (star) from an item.",
+      "scopes": [
+        "stars.write"
+      ],
+      "korean_rephrase": "stars.remove 메서드는 Removes a saved item (star) from an item. 기능을 수행합니다.",
+      "family_korean_hint": "해당 도메인의 Slack 기능 제어"
+    },
+    {
+      "method": "team.accessLogs",
+      "family": "team",
+      "url": "https://docs.slack.dev/reference/methods/team.accessLogs",
+      "description": "Gets the access logs for the current team.",
+      "scopes": [
+        "admin"
+      ],
+      "korean_rephrase": "team.accessLogs 메서드는 Gets the access logs for the current team. 기능을 수행합니다.",
+      "family_korean_hint": "해당 도메인의 Slack 기능 제어"
+    },
+    {
+      "method": "team.billableInfo",
+      "family": "team",
+      "url": "https://docs.slack.dev/reference/methods/team.billableInfo",
+      "description": "Gets billable users information for the current team.",
+      "scopes": [
+        "admin"
+      ],
+      "korean_rephrase": "team.billableInfo 메서드는 Gets billable users information for the current team. 기능을 수행합니다.",
+      "family_korean_hint": "해당 도메인의 Slack 기능 제어"
+    },
+    {
+      "method": "team.billing.info",
+      "family": "team",
+      "url": "https://docs.slack.dev/reference/methods/team.billing.info",
+      "description": "Reads a workspace's billing plan information.",
+      "scopes": [
+        "team.billing.read"
+      ],
+      "korean_rephrase": "team.billing.info 메서드는 Reads a workspace's billing plan information. 기능을 수행합니다.",
+      "family_korean_hint": "해당 도메인의 Slack 기능 제어"
+    },
+    {
+      "method": "team.externalTeams.disconnect",
+      "family": "team",
+      "url": "https://docs.slack.dev/reference/methods/team.externalTeams.disconnect",
+      "description": "Disconnect an external organization.",
+      "scopes": [
+        "conversations.connect.manage"
+      ],
+      "korean_rephrase": "team.externalTeams.disconnect 메서드는 Disconnect an external organization. 기능을 수행합니다.",
+      "family_korean_hint": "해당 도메인의 Slack 기능 제어"
+    },
+    {
+      "method": "team.externalTeams.list",
+      "family": "team",
+      "url": "https://docs.slack.dev/reference/methods/team.externalTeams.list",
+      "description": "Returns a list of all the external teams connected and details about the connection.",
+      "scopes": [
+        "conversations.connect.manage",
+        "team.read"
+      ],
+      "korean_rephrase": "team.externalTeams.list 메서드는 Returns a list of all the external teams connected and details about the connection. 기능을 수행합니다.",
+      "family_korean_hint": "해당 도메인의 Slack 기능 제어"
+    },
+    {
+      "method": "team.info",
+      "family": "team",
+      "url": "https://docs.slack.dev/reference/methods/team.info",
+      "description": "Gets information about the current team.",
+      "scopes": [
+        "team.read"
+      ],
+      "korean_rephrase": "team.info 메서드는 Gets information about the current team. 기능을 수행합니다.",
+      "family_korean_hint": "해당 도메인의 Slack 기능 제어"
+    },
+    {
+      "method": "team.integrationLogs",
+      "family": "team",
+      "url": "https://docs.slack.dev/reference/methods/team.integrationLogs",
+      "description": "Gets the integration logs for the current team.",
+      "scopes": [
+        "admin"
+      ],
+      "korean_rephrase": "team.integrationLogs 메서드는 Gets the integration logs for the current team. 기능을 수행합니다.",
+      "family_korean_hint": "해당 도메인의 Slack 기능 제어"
+    },
+    {
+      "method": "team.preferences.list",
+      "family": "team",
+      "url": "https://docs.slack.dev/reference/methods/team.preferences.list",
+      "description": "Retrieve a list of a workspace's team preferences.",
+      "scopes": [
+        "team.preferences.read"
+      ],
+      "korean_rephrase": "team.preferences.list 메서드는 Retrieve a list of a workspace's team preferences. 기능을 수행합니다.",
+      "family_korean_hint": "해당 도메인의 Slack 기능 제어"
+    },
+    {
+      "method": "team.profile.get",
+      "family": "team",
+      "url": "https://docs.slack.dev/reference/methods/team.profile.get",
+      "description": "Retrieve a team's profile.",
+      "scopes": [
+        "users.profile.read"
+      ],
+      "korean_rephrase": "team.profile.get 메서드는 Retrieve a team's profile. 기능을 수행합니다.",
+      "family_korean_hint": "해당 도메인의 Slack 기능 제어"
+    },
+    {
+      "method": "tooling.tokens.rotate",
+      "family": "tooling",
+      "url": "https://docs.slack.dev/reference/methods/tooling.tokens.rotate",
+      "description": "Exchanges a refresh token for a new app configuration token.",
+      "scopes": [],
+      "korean_rephrase": "tooling.tokens.rotate 메서드는 Exchanges a refresh token for a new app configuration token. 기능을 수행합니다.",
+      "family_korean_hint": "해당 도메인의 Slack 기능 제어"
+    },
+    {
+      "method": "usergroups.create",
+      "family": "usergroups",
+      "url": "https://docs.slack.dev/reference/methods/usergroups.create",
+      "description": "Create a User Group.",
+      "scopes": [
+        "usergroups.write"
+      ],
+      "korean_rephrase": "usergroups.create 메서드는 Create a User Group. 기능을 수행합니다.",
+      "family_korean_hint": "유저그룹 관리"
+    },
+    {
+      "method": "usergroups.disable",
+      "family": "usergroups",
+      "url": "https://docs.slack.dev/reference/methods/usergroups.disable",
+      "description": "Disable an existing User Group.",
+      "scopes": [
+        "usergroups.write"
+      ],
+      "korean_rephrase": "usergroups.disable 메서드는 Disable an existing User Group. 기능을 수행합니다.",
+      "family_korean_hint": "유저그룹 관리"
+    },
+    {
+      "method": "usergroups.enable",
+      "family": "usergroups",
+      "url": "https://docs.slack.dev/reference/methods/usergroups.enable",
+      "description": "Enable a User Group.",
+      "scopes": [
+        "usergroups.write"
+      ],
+      "korean_rephrase": "usergroups.enable 메서드는 Enable a User Group. 기능을 수행합니다.",
+      "family_korean_hint": "유저그룹 관리"
+    },
+    {
+      "method": "usergroups.list",
+      "family": "usergroups",
+      "url": "https://docs.slack.dev/reference/methods/usergroups.list",
+      "description": "List all User Groups for a team.",
+      "scopes": [
+        "usergroups.read"
+      ],
+      "korean_rephrase": "usergroups.list 메서드는 List all User Groups for a team. 기능을 수행합니다.",
+      "family_korean_hint": "유저그룹 관리"
+    },
+    {
+      "method": "usergroups.update",
+      "family": "usergroups",
+      "url": "https://docs.slack.dev/reference/methods/usergroups.update",
+      "description": "Update an existing User Group.",
+      "scopes": [
+        "usergroups.write"
+      ],
+      "korean_rephrase": "usergroups.update 메서드는 Update an existing User Group. 기능을 수행합니다.",
+      "family_korean_hint": "유저그룹 관리"
+    },
+    {
+      "method": "usergroups.users.list",
+      "family": "usergroups",
+      "url": "https://docs.slack.dev/reference/methods/usergroups.users.list",
+      "description": "List all users in a User Group.",
+      "scopes": [
+        "usergroups.read"
+      ],
+      "korean_rephrase": "usergroups.users.list 메서드는 List all users in a User Group. 기능을 수행합니다.",
+      "family_korean_hint": "유저그룹 관리"
+    },
+    {
+      "method": "usergroups.users.update",
+      "family": "usergroups",
+      "url": "https://docs.slack.dev/reference/methods/usergroups.users.update",
+      "description": "Update the list of users for a user group.",
+      "scopes": [
+        "usergroups.write"
+      ],
+      "korean_rephrase": "usergroups.users.update 메서드는 Update the list of users for a user group. 기능을 수행합니다.",
+      "family_korean_hint": "유저그룹 관리"
+    },
+    {
+      "method": "users.conversations",
+      "family": "users",
+      "url": "https://docs.slack.dev/reference/methods/users.conversations",
+      "description": "List conversations the calling user is a member of.",
+      "scopes": [
+        "channels.read",
+        "groups.read",
+        "im.read",
+        "mpim.read"
+      ],
+      "korean_rephrase": "users.conversations 메서드는 List conversations the calling user is a member of. 기능을 수행합니다.",
+      "family_korean_hint": "유저 조회/프로필/프레즌스"
+    },
+    {
+      "method": "users.deletePhoto",
+      "family": "users",
+      "url": "https://docs.slack.dev/reference/methods/users.deletePhoto",
+      "description": "Delete the user profile photo",
+      "scopes": [
+        "users.profile.write"
+      ],
+      "korean_rephrase": "users.deletePhoto 메서드는 Delete the user profile photo 기능을 수행합니다.",
+      "family_korean_hint": "유저 조회/프로필/프레즌스"
+    },
+    {
+      "method": "users.discoverableContacts.lookup",
+      "family": "users",
+      "url": "https://docs.slack.dev/reference/methods/users.discoverableContacts.lookup",
+      "description": "Look up an email address to see if someone is discoverable on Slack",
+      "scopes": [
+        "conversations.connect.manage",
+        "team.read"
+      ],
+      "korean_rephrase": "users.discoverableContacts.lookup 메서드는 Look up an email address to see if someone is discoverable on Slack 기능을 수행합니다.",
+      "family_korean_hint": "유저 조회/프로필/프레즌스"
+    },
+    {
+      "method": "users.getPresence",
+      "family": "users",
+      "url": "https://docs.slack.dev/reference/methods/users.getPresence",
+      "description": "Gets user presence information.",
+      "scopes": [
+        "users.read"
+      ],
+      "korean_rephrase": "users.getPresence 메서드는 Gets user presence information. 기능을 수행합니다.",
+      "family_korean_hint": "유저 조회/프로필/프레즌스"
+    },
+    {
+      "method": "users.identity",
+      "family": "users",
+      "url": "https://docs.slack.dev/reference/methods/users.identity",
+      "description": "Get a user's identity.",
+      "scopes": [
+        "identity.read"
+      ],
+      "korean_rephrase": "users.identity 메서드는 Get a user's identity. 기능을 수행합니다.",
+      "family_korean_hint": "유저 조회/프로필/프레즌스"
+    },
+    {
+      "method": "users.info",
+      "family": "users",
+      "url": "https://docs.slack.dev/reference/methods/users.info",
+      "description": "Gets information about a user.",
+      "scopes": [
+        "users.read",
+        "users.read.email"
+      ],
+      "korean_rephrase": "users.info 메서드는 Gets information about a user. 기능을 수행합니다.",
+      "family_korean_hint": "유저 조회/프로필/프레즌스"
+    },
+    {
+      "method": "users.list",
+      "family": "users",
+      "url": "https://docs.slack.dev/reference/methods/users.list",
+      "description": "Lists all users in a Slack team.",
+      "scopes": [
+        "users.read",
+        "users.read.email"
+      ],
+      "korean_rephrase": "users.list 메서드는 Lists all users in a Slack team. 기능을 수행합니다.",
+      "family_korean_hint": "유저 조회/프로필/프레즌스"
+    },
+    {
+      "method": "users.lookupByEmail",
+      "family": "users",
+      "url": "https://docs.slack.dev/reference/methods/users.lookupByEmail",
+      "description": "Find a user with an email address.",
+      "scopes": [
+        "users.read",
+        "users.read.email",
+        "users.read.email."
+      ],
+      "korean_rephrase": "users.lookupByEmail 메서드는 Find a user with an email address. 기능을 수행합니다.",
+      "family_korean_hint": "유저 조회/프로필/프레즌스"
+    },
+    {
+      "method": "users.profile.get",
+      "family": "users",
+      "url": "https://docs.slack.dev/reference/methods/users.profile.get",
+      "description": "Retrieve a user's profile information, including their custom status.",
+      "scopes": [
+        "users.profile.read",
+        "users.read",
+        "users.read.email"
+      ],
+      "korean_rephrase": "users.profile.get 메서드는 Retrieve a user's profile information, including their custom status. 기능을 수행합니다.",
+      "family_korean_hint": "유저 조회/프로필/프레즌스"
+    },
+    {
+      "method": "users.profile.set",
+      "family": "users",
+      "url": "https://docs.slack.dev/reference/methods/users.profile.set",
+      "description": "Set a user's profile information, including custom status.",
+      "scopes": [
+        "users.profile.write"
+      ],
+      "korean_rephrase": "users.profile.set 메서드는 Set a user's profile information, including custom status. 기능을 수행합니다.",
+      "family_korean_hint": "유저 조회/프로필/프레즌스"
+    },
+    {
+      "method": "users.setActive",
+      "family": "users",
+      "url": "https://docs.slack.dev/reference/methods/users.setActive",
+      "description": "Marked a user as active. Deprecated and non-functional.",
+      "scopes": [
+        "users.write"
+      ],
+      "korean_rephrase": "users.setActive 메서드는 Marked a user as active. Deprecated and non-functional. 기능을 수행합니다.",
+      "family_korean_hint": "유저 조회/프로필/프레즌스"
+    },
+    {
+      "method": "users.setPhoto",
+      "family": "users",
+      "url": "https://docs.slack.dev/reference/methods/users.setPhoto",
+      "description": "Set the user profile photo",
+      "scopes": [
+        "users.profile.write"
+      ],
+      "korean_rephrase": "users.setPhoto 메서드는 Set the user profile photo 기능을 수행합니다.",
+      "family_korean_hint": "유저 조회/프로필/프레즌스"
+    },
+    {
+      "method": "users.setPresence",
+      "family": "users",
+      "url": "https://docs.slack.dev/reference/methods/users.setPresence",
+      "description": "Manually sets user presence.",
+      "scopes": [
+        "users.write"
+      ],
+      "korean_rephrase": "users.setPresence 메서드는 Manually sets user presence. 기능을 수행합니다.",
+      "family_korean_hint": "유저 조회/프로필/프레즌스"
+    },
+    {
+      "method": "views.open",
+      "family": "views",
+      "url": "https://docs.slack.dev/reference/methods/views.open",
+      "description": "Open a view for a user.",
+      "scopes": [],
+      "korean_rephrase": "views.open 메서드는 Open a view for a user. 기능을 수행합니다.",
+      "family_korean_hint": "모달/뷰 열기/수정"
+    },
+    {
+      "method": "views.publish",
+      "family": "views",
+      "url": "https://docs.slack.dev/reference/methods/views.publish",
+      "description": "Publish a static view for a User.",
+      "scopes": [],
+      "korean_rephrase": "views.publish 메서드는 Publish a static view for a User. 기능을 수행합니다.",
+      "family_korean_hint": "모달/뷰 열기/수정"
+    },
+    {
+      "method": "views.push",
+      "family": "views",
+      "url": "https://docs.slack.dev/reference/methods/views.push",
+      "description": "Push a view onto the stack of a root view.",
+      "scopes": [],
+      "korean_rephrase": "views.push 메서드는 Push a view onto the stack of a root view. 기능을 수행합니다.",
+      "family_korean_hint": "모달/뷰 열기/수정"
+    },
+    {
+      "method": "views.update",
+      "family": "views",
+      "url": "https://docs.slack.dev/reference/methods/views.update",
+      "description": "Update an existing view.",
+      "scopes": [],
+      "korean_rephrase": "views.update 메서드는 Update an existing view. 기능을 수행합니다.",
+      "family_korean_hint": "모달/뷰 열기/수정"
+    },
+    {
+      "method": "workflows.featured.add",
+      "family": "workflows",
+      "url": "https://docs.slack.dev/reference/methods/workflows.featured.add",
+      "description": "Add featured workflows to a channel.",
+      "scopes": [
+        "bookmarks.write"
+      ],
+      "korean_rephrase": "workflows.featured.add 메서드는 Add featured workflows to a channel. 기능을 수행합니다.",
+      "family_korean_hint": "워크플로우 관련 관리"
+    },
+    {
+      "method": "workflows.featured.list",
+      "family": "workflows",
+      "url": "https://docs.slack.dev/reference/methods/workflows.featured.list",
+      "description": "List the featured workflows for specified channels.",
+      "scopes": [
+        "bookmarks.read"
+      ],
+      "korean_rephrase": "workflows.featured.list 메서드는 List the featured workflows for specified channels. 기능을 수행합니다.",
+      "family_korean_hint": "워크플로우 관련 관리"
+    },
+    {
+      "method": "workflows.featured.remove",
+      "family": "workflows",
+      "url": "https://docs.slack.dev/reference/methods/workflows.featured.remove",
+      "description": "Remove featured workflows from a channel.",
+      "scopes": [
+        "bookmarks.write"
+      ],
+      "korean_rephrase": "workflows.featured.remove 메서드는 Remove featured workflows from a channel. 기능을 수행합니다.",
+      "family_korean_hint": "워크플로우 관련 관리"
+    },
+    {
+      "method": "workflows.featured.set",
+      "family": "workflows",
+      "url": "https://docs.slack.dev/reference/methods/workflows.featured.set",
+      "description": "Set featured workflows for a channel.",
+      "scopes": [
+        "bookmarks.write"
+      ],
+      "korean_rephrase": "workflows.featured.set 메서드는 Set featured workflows for a channel. 기능을 수행합니다.",
+      "family_korean_hint": "워크플로우 관련 관리"
+    },
+    {
+      "method": "workflows.triggers.permissions.add",
+      "family": "workflows",
+      "url": "https://docs.slack.dev/reference/methods/workflows.triggers.permissions.add",
+      "description": "Allows users to run a trigger that has its permission type set to named_entities",
+      "scopes": [
+        "triggers.write"
+      ],
+      "korean_rephrase": "workflows.triggers.permissions.add 메서드는 Allows users to run a trigger that has its permission type set to named_entities 기능을 수행합니다.",
+      "family_korean_hint": "워크플로우 관련 관리"
+    },
+    {
+      "method": "workflows.triggers.permissions.list",
+      "family": "workflows",
+      "url": "https://docs.slack.dev/reference/methods/workflows.triggers.permissions.list",
+      "description": "Returns the permission type of a trigger and if applicable, includes the entities that have been granted access",
+      "scopes": [
+        "triggers.read"
+      ],
+      "korean_rephrase": "workflows.triggers.permissions.list 메서드는 Returns the permission type of a trigger and if applicable, includes the entities that have been granted access 기능을 수행합니다.",
+      "family_korean_hint": "워크플로우 관련 관리"
+    },
+    {
+      "method": "workflows.triggers.permissions.remove",
+      "family": "workflows",
+      "url": "https://docs.slack.dev/reference/methods/workflows.triggers.permissions.remove",
+      "description": "Revoke an entity's access to a trigger that has its permission type set to named_entities",
+      "scopes": [
+        "triggers.write"
+      ],
+      "korean_rephrase": "workflows.triggers.permissions.remove 메서드는 Revoke an entity's access to a trigger that has its permission type set to named_entities 기능을 수행합니다.",
+      "family_korean_hint": "워크플로우 관련 관리"
+    },
+    {
+      "method": "workflows.triggers.permissions.set",
+      "family": "workflows",
+      "url": "https://docs.slack.dev/reference/methods/workflows.triggers.permissions.set",
+      "description": "Set the permission type for who can run a trigger",
+      "scopes": [
+        "triggers.write"
+      ],
+      "korean_rephrase": "workflows.triggers.permissions.set 메서드는 Set the permission type for who can run a trigger 기능을 수행합니다.",
+      "family_korean_hint": "워크플로우 관련 관리"
+    }
+  ]
+}
