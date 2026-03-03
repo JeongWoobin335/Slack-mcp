@@ -55,6 +55,10 @@ const AUTO_ONBOARD_GATEWAY =
   process.env.SLACK_AUTO_ONBOARD_GATEWAY || process.env.SLACK_ONBOARD_GATEWAY_URL || "";
 const AUTO_ONBOARD_TOKEN = process.env.SLACK_AUTO_ONBOARD_TOKEN || process.env.SLACK_ONBOARD_TOKEN || "";
 const AUTO_ONBOARD_URL = process.env.SLACK_AUTO_ONBOARD_URL || process.env.SLACK_ONBOARD_URL || "";
+const ONBOARD_PACKAGE_SPEC =
+  process.env.SLACK_ONBOARD_PACKAGE_SPEC ||
+  process.env.SLACK_ONBOARD_INSTALL_SPEC ||
+  "slack-max-api-mcp@latest";
 
 function parseSimpleEnvFile(filePath) {
   if (!fs.existsSync(filePath)) return {};
@@ -1149,11 +1153,11 @@ function buildOauthStartUrlFromInvitePayload(gatewayBaseUrl, payload) {
 function buildOnboardPowerShellScript({ gatewayBaseUrl, token }) {
   const safeGateway = String(gatewayBaseUrl || "").replace(/'/g, "''");
   const safeToken = String(token || "").replace(/'/g, "''");
+  const safePackageSpec = String(ONBOARD_PACKAGE_SPEC || "").replace(/'/g, "''");
   return [
     "$ErrorActionPreference = 'Stop'",
-    "if (-not (Get-Command npm -ErrorAction SilentlyContinue)) { throw 'npm is required. Install Node.js first.' }",
-    "npm install -g slack-max-api-mcp@latest | Out-Host",
-    `slack-max-api-mcp onboard run --gateway '${safeGateway}' --token '${safeToken}'`,
+    "if (-not (Get-Command npx -ErrorAction SilentlyContinue)) { throw 'npx is required. Install Node.js first.' }",
+    `npx -y '${safePackageSpec}' onboard run --gateway '${safeGateway}' --token '${safeToken}'`,
   ].join("\r\n");
 }
 
