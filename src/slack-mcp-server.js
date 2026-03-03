@@ -48,17 +48,26 @@ const GATEWAY_ALLOW_PUBLIC = process.env.SLACK_GATEWAY_ALLOW_PUBLIC === "true";
 const GATEWAY_SHARED_SECRET = process.env.SLACK_GATEWAY_SHARED_SECRET || GATEWAY_API_KEY;
 const GATEWAY_CLIENT_API_KEY =
   process.env.SLACK_GATEWAY_CLIENT_API_KEY || GATEWAY_API_KEY || GATEWAY_SHARED_SECRET;
+const GATEWAY_PUBLIC_ONBOARD_ENABLED = process.env.SLACK_GATEWAY_PUBLIC_ONBOARD === "true";
+const GATEWAY_PUBLIC_ONBOARD_EXPOSE_API_KEY =
+  process.env.SLACK_GATEWAY_PUBLIC_ONBOARD_EXPOSE_API_KEY === "true";
+const GATEWAY_PUBLIC_ONBOARD_API_KEY = process.env.SLACK_GATEWAY_PUBLIC_ONBOARD_API_KEY || "";
+const GATEWAY_PUBLIC_ONBOARD_PROFILE_PREFIX =
+  process.env.SLACK_GATEWAY_PUBLIC_ONBOARD_PROFILE_PREFIX || "auto";
 const GATEWAY_STATE_TTL_MS = Number(process.env.SLACK_GATEWAY_STATE_TTL_MS || 15 * 60 * 1000);
 const INVITE_TOKEN_DEFAULT_DAYS = Number(process.env.SLACK_INVITE_TOKEN_DEFAULT_DAYS || 7);
 const AUTO_ONBOARD_ENABLED = process.env.SLACK_AUTO_ONBOARD !== "false";
 const AUTO_ONBOARD_GATEWAY =
   process.env.SLACK_AUTO_ONBOARD_GATEWAY || process.env.SLACK_ONBOARD_GATEWAY_URL || "";
+const AUTO_ONBOARD_PROFILE = process.env.SLACK_AUTO_ONBOARD_PROFILE || "";
 const AUTO_ONBOARD_TOKEN = process.env.SLACK_AUTO_ONBOARD_TOKEN || process.env.SLACK_ONBOARD_TOKEN || "";
 const AUTO_ONBOARD_URL = process.env.SLACK_AUTO_ONBOARD_URL || process.env.SLACK_ONBOARD_URL || "";
+const AUTO_ONBOARD_PROFILE_PREFIX = process.env.SLACK_AUTO_ONBOARD_PROFILE_PREFIX || "auto";
 const ONBOARD_PACKAGE_SPEC =
   process.env.SLACK_ONBOARD_PACKAGE_SPEC ||
   process.env.SLACK_ONBOARD_INSTALL_SPEC ||
   "slack-max-api-mcp@latest";
+const ONBOARD_SKIP_TLS_VERIFY = process.env.SLACK_ONBOARD_SKIP_TLS_VERIFY === "true";
 
 function parseSimpleEnvFile(filePath) {
   if (!fs.existsSync(filePath)) return {};
@@ -86,6 +95,31 @@ const FIXED_GENERIC_TOKEN = ENV_EXAMPLE_VALUES.SLACK_TOKEN || "";
 function parseScopeList(raw) {
   if (!raw) return [];
   return [...new Set(String(raw).split(",").map((part) => part.trim()).filter(Boolean))];
+}
+
+function normalizeOnboardNamePart(value, fallback) {
+  const normalized = String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9_-]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+  if (!normalized) return fallback;
+  return normalized;
+}
+
+function createAutoOnboardProfileName(prefix = "auto") {
+  let username = "user";
+  try {
+    username = os.userInfo().username || process.env.USERNAME || process.env.USER || "user";
+  } catch {
+    username = process.env.USERNAME || process.env.USER || "user";
+  }
+  const host = os.hostname() || "host";
+  const profilePrefix = normalizeOnboardNamePart(prefix, "auto");
+  const userPart = normalizeOnboardNamePart(username, "user");
+  const hostPart = normalizeOnboardNamePart(host, "host");
+  const rand = crypto.randomBytes(3).toString("hex");
+  return `${profilePrefix}-${userPart}-${hostPart}-${rand}`.slice(0, 80);
 }
 
 function ensureParentDirectory(filePath) {
@@ -632,12 +666,20 @@ async function runAutoOnboardingIfPossible() {
   }
 
   if (AUTO_ONBOARD_GATEWAY && AUTO_ONBOARD_TOKEN) {
-    await runOnboardStart([
-      "--gateway",
-      AUTO_ONBOARD_GATEWAY,
-      "--token",
-      AUTO_ONBOARD_TOKEN,
-    ]);
+    const args = ["--gateway", AUTO_ONBOARD_GATEWAY, "--token", AUTO_ONBOARD_TOKEN];
+    if (AUTO_ONBOARD_PROFILE) args.push("--profile", AUTO_ONBOARD_PROFILE);
+    await runOnboardStart(args);
+    return true;
+  }
+
+  if (AUTO_ONBOARD_GATEWAY) {
+    const args = ["--gateway", AUTO_ONBOARD_GATEWAY];
+    if (AUTO_ONBOARD_PROFILE) {
+      args.push("--profile", AUTO_ONBOARD_PROFILE);
+    } else if (AUTO_ONBOARD_PROFILE_PREFIX) {
+      args.push("--profile", createAutoOnboardProfileName(AUTO_ONBOARD_PROFILE_PREFIX));
+    }
+    await runOnboardStart(args);
     return true;
   }
 
@@ -976,9 +1018,12 @@ function printOnboardHelp() {
     "Slack Max onboarding helper",
     "",
     "Usage:",
-    "  slack-max-api-mcp onboard run --gateway https://gateway.example.com --token <invite_token>",
+    "  slack-max-api-mcp onboard run --gateway https://gateway.example.com [--token <invite_token>]",
+    "    [--profile NAME] [--team T123] [--scope a,b] [--user-scope c,d]",
+    "  slack-max-api-mcp onboard quick --gateway https://gateway.example.com",
     "  slack-max-api-mcp onboard help",
     "",
+    "If --token is omitted, it uses gateway public onboarding endpoint (/onboard/bootstrap).",
     "This command writes local client config and opens the Slack OAuth approval page automatically.",
   ];
   console.log(lines.join("\n"));
@@ -988,11 +1033,31 @@ async function runOnboardStart(args) {
   const { options } = parseCliArgs(args);
   const gateway = String(options.gateway || options.url || "").replace(/\/+$/, "");
   const token = String(options.token || "");
-  if (!gateway || !token) {
-    throw new Error("Usage: slack-max-api-mcp onboard run --gateway <url> --token <invite_token>");
+  if (!gateway) {
+    throw new Error(
+      "Usage: slack-max-api-mcp onboard run --gateway <url> [--token <invite_token>] [--profile <name>]"
+    );
   }
 
-  const response = await fetch(`${gateway}/onboard/resolve?token=${encodeURIComponent(token)}`, {
+  const requestedProfile =
+    String(options.profile || "").trim() || createAutoOnboardProfileName(AUTO_ONBOARD_PROFILE_PREFIX);
+  const requestedTeam = String(options.team || "").trim();
+  const requestedScope = parseScopeList(options.scope || "").join(",");
+  const requestedUserScope = parseScopeList(options["user-scope"] || options.user_scope || "").join(",");
+
+  const onboardingUrl = token
+    ? `${gateway}/onboard/resolve?token=${encodeURIComponent(token)}`
+    : (() => {
+        const params = new URLSearchParams();
+        if (requestedProfile) params.set("profile", requestedProfile);
+        if (requestedTeam) params.set("team", requestedTeam);
+        if (requestedScope) params.set("scope", requestedScope);
+        if (requestedUserScope) params.set("user_scope", requestedUserScope);
+        const query = params.toString();
+        return `${gateway}/onboard/bootstrap${query ? `?${query}` : ""}`;
+      })();
+
+  const response = await fetch(onboardingUrl, {
     method: "GET",
     headers: { Accept: "application/json" },
   });
@@ -1006,13 +1071,22 @@ async function runOnboardStart(args) {
   }
 
   if (!response.ok || !data?.ok) {
+    if (!token && response.status === 404) {
+      throw new Error("Onboarding failed: public onboarding is disabled on gateway (enable SLACK_GATEWAY_PUBLIC_ONBOARD=true).");
+    }
     throw new Error(`Onboarding failed: ${data?.error || `http_${response.status}`}`);
   }
 
   const resolvedGatewayUrl = String(data.gateway_url || gateway).replace(/\/+$/, "");
   const resolvedApiKey = String(data.gateway_api_key || "");
-  const profile = String(data.profile || "");
+  const profile = String(data.profile || requestedProfile || "");
   const oauthStartUrl = String(data.oauth_start_url || "");
+
+  if (data.requires_gateway_api_key && !resolvedApiKey) {
+    throw new Error(
+      "Gateway requires API key but onboarding response did not provide one. Enable public gateway access or set SLACK_GATEWAY_PUBLIC_ONBOARD_API_KEY."
+    );
+  }
 
   saveClientConfig({
     version: 1,
@@ -1032,6 +1106,9 @@ async function runOnboardStart(args) {
   console.log(`[onboard] client config saved: ${CLIENT_CONFIG_PATH}`);
   console.log(`[onboard] gateway: ${resolvedGatewayUrl}`);
   if (profile) console.log(`[onboard] profile: ${profile}`);
+  if (data.mode === "public_onboard") {
+    console.log("[onboard] mode: public_onboard (tokenless)");
+  }
   console.log("[onboard] Next: approve in browser, then use Codex MCP as usual.");
 }
 
@@ -1042,7 +1119,7 @@ async function runOnboardCli(args) {
     printOnboardHelp();
     return;
   }
-  if (subcommand === "run" || subcommand === "start") {
+  if (subcommand === "run" || subcommand === "start" || subcommand === "quick") {
     await runOnboardStart(rest);
     return;
   }
@@ -1150,15 +1227,65 @@ function buildOauthStartUrlFromInvitePayload(gatewayBaseUrl, payload) {
   return `${gatewayBaseUrl.replace(/\/+$/, "")}/oauth/start${params.toString() ? `?${params.toString()}` : ""}`;
 }
 
-function buildOnboardPowerShellScript({ gatewayBaseUrl, token }) {
+function buildPublicOnboardPayload(gatewayBaseUrl, params = {}) {
+  const profile = String(params.profile || "").trim() || createAutoOnboardProfileName(GATEWAY_PUBLIC_ONBOARD_PROFILE_PREFIX);
+  const team = String(params.team || process.env.SLACK_OAUTH_TEAM_ID || "").trim();
+  const scope = parseScopeList(params.scope || DEFAULT_OAUTH_BOT_SCOPES).join(",");
+  const userScope = parseScopeList(params.user_scope || DEFAULT_OAUTH_USER_SCOPES).join(",");
+  const payload = {
+    gateway_url: gatewayBaseUrl,
+    gateway_api_key: "",
+    profile,
+    team,
+    scope,
+    user_scope: userScope,
+  };
+  if (GATEWAY_ALLOW_PUBLIC) {
+    payload.gateway_api_key = "";
+  } else if (GATEWAY_PUBLIC_ONBOARD_API_KEY) {
+    payload.gateway_api_key = GATEWAY_PUBLIC_ONBOARD_API_KEY;
+  } else if (GATEWAY_PUBLIC_ONBOARD_EXPOSE_API_KEY) {
+    payload.gateway_api_key = GATEWAY_CLIENT_API_KEY || "";
+  }
+  const oauthStartUrl = buildOauthStartUrlFromInvitePayload(gatewayBaseUrl, payload);
+  return {
+    ok: true,
+    mode: "public_onboard",
+    gateway_url: payload.gateway_url,
+    gateway_api_key: payload.gateway_api_key,
+    profile: payload.profile,
+    oauth_start_url: oauthStartUrl,
+    requires_gateway_api_key: !GATEWAY_ALLOW_PUBLIC,
+  };
+}
+
+function buildOnboardPowerShellScript({ gatewayBaseUrl, token, profile, team, scope, userScope }) {
   const safeGateway = String(gatewayBaseUrl || "").replace(/'/g, "''");
   const safeToken = String(token || "").replace(/'/g, "''");
+  const safeProfile = String(profile || "").replace(/'/g, "''");
+  const safeTeam = String(team || "").replace(/'/g, "''");
+  const safeScope = String(scope || "").replace(/'/g, "''");
+  const safeUserScope = String(userScope || "").replace(/'/g, "''");
   const safePackageSpec = String(ONBOARD_PACKAGE_SPEC || "").replace(/'/g, "''");
-  return [
+  const onboardCommandParts = [`npx -y '${safePackageSpec}' onboard run --gateway '${safeGateway}'`];
+  if (safeToken) onboardCommandParts.push(`--token '${safeToken}'`);
+  if (safeProfile) onboardCommandParts.push(`--profile '${safeProfile}'`);
+  if (safeTeam) onboardCommandParts.push(`--team '${safeTeam}'`);
+  if (safeScope) onboardCommandParts.push(`--scope '${safeScope}'`);
+  if (safeUserScope) onboardCommandParts.push(`--user-scope '${safeUserScope}'`);
+
+  const lines = [
     "$ErrorActionPreference = 'Stop'",
     "if (-not (Get-Command npx -ErrorAction SilentlyContinue)) { throw 'npx is required. Install Node.js first.' }",
-    `npx -y '${safePackageSpec}' onboard run --gateway '${safeGateway}' --token '${safeToken}'`,
-  ].join("\r\n");
+  ];
+  if (ONBOARD_SKIP_TLS_VERIFY) {
+    lines.push("$env:NODE_TLS_REJECT_UNAUTHORIZED='0'");
+  }
+  lines.push(onboardCommandParts.join(" "));
+  if (ONBOARD_SKIP_TLS_VERIFY) {
+    lines.push("Remove-Item Env:NODE_TLS_REJECT_UNAUTHORIZED -ErrorAction SilentlyContinue");
+  }
+  return lines.join("\r\n");
 }
 
 function createGatewayInviteTokenFromOptions(options = {}) {
@@ -1259,17 +1386,53 @@ async function startGatewayServer() {
 
       if (method === "GET" && requestUrl.pathname === "/onboard.ps1") {
         const token = requestUrl.searchParams.get("token") || "";
-        const secret = requireGatewayInviteSecret();
-        const payload = parseAndVerifyInviteToken(token, secret);
-        const script = buildOnboardPowerShellScript({
-          gatewayBaseUrl: payload.gateway_url || gatewayBaseUrl,
-          token,
-        });
+        let script = "";
+        if (token) {
+          const secret = requireGatewayInviteSecret();
+          const payload = parseAndVerifyInviteToken(token, secret);
+          script = buildOnboardPowerShellScript({
+            gatewayBaseUrl: payload.gateway_url || gatewayBaseUrl,
+            token,
+          });
+        } else {
+          if (!GATEWAY_PUBLIC_ONBOARD_ENABLED) {
+            sendJson(res, 404, { ok: false, error: "public_onboard_disabled" });
+            return;
+          }
+          const profile =
+            requestUrl.searchParams.get("profile") ||
+            createAutoOnboardProfileName(GATEWAY_PUBLIC_ONBOARD_PROFILE_PREFIX);
+          const team = requestUrl.searchParams.get("team") || "";
+          const scope = requestUrl.searchParams.get("scope") || "";
+          const userScope = requestUrl.searchParams.get("user_scope") || "";
+          script = buildOnboardPowerShellScript({
+            gatewayBaseUrl,
+            profile,
+            team,
+            scope,
+            userScope,
+          });
+        }
         res.writeHead(200, {
           "Content-Type": "text/plain; charset=utf-8",
           "Cache-Control": "no-store",
         });
         res.end(script);
+        return;
+      }
+
+      if (method === "GET" && requestUrl.pathname === "/onboard/bootstrap") {
+        if (!GATEWAY_PUBLIC_ONBOARD_ENABLED) {
+          sendJson(res, 404, { ok: false, error: "public_onboard_disabled" });
+          return;
+        }
+        const payload = buildPublicOnboardPayload(gatewayBaseUrl, {
+          profile: requestUrl.searchParams.get("profile") || "",
+          team: requestUrl.searchParams.get("team") || "",
+          scope: requestUrl.searchParams.get("scope") || "",
+          user_scope: requestUrl.searchParams.get("user_scope") || "",
+        });
+        sendJson(res, 200, payload);
         return;
       }
 
@@ -1280,6 +1443,7 @@ async function startGatewayServer() {
         const oauthStartUrl = buildOauthStartUrlFromInvitePayload(gatewayBaseUrl, payload);
         sendJson(res, 200, {
           ok: true,
+          mode: "invite_token",
           gateway_url: payload.gateway_url || gatewayBaseUrl,
           gateway_api_key: payload.gateway_api_key || "",
           profile: payload.profile || "",
@@ -1475,6 +1639,9 @@ async function startGatewayServer() {
   );
   console.error(`[${SERVER_NAME}] oauth start URL: ${gatewayBaseUrl}/oauth/start`);
   console.error(`[${SERVER_NAME}] profile list URL: ${gatewayBaseUrl}/profiles`);
+  if (GATEWAY_PUBLIC_ONBOARD_ENABLED) {
+    console.error(`[${SERVER_NAME}] public onboard URL: ${gatewayBaseUrl}/onboard/bootstrap`);
+  }
 }
 
 function printGatewayHelp() {
@@ -1484,6 +1651,8 @@ function printGatewayHelp() {
     "Usage:",
     "  slack-max-api-mcp gateway start",
     "  slack-max-api-mcp gateway invite --profile woobin --team T123",
+    "  # tokenless onboarding endpoint (when enabled):",
+    "  #   https://gateway.example.com/onboard/bootstrap",
     "  slack-max-api-mcp gateway help",
     "",
     "Gateway env vars (server-side):",
@@ -1491,6 +1660,9 @@ function printGatewayHelp() {
     "  SLACK_GATEWAY_HOST, SLACK_GATEWAY_PORT, SLACK_GATEWAY_PUBLIC_BASE_URL",
     "  SLACK_GATEWAY_SHARED_SECRET (recommended)",
     "  SLACK_GATEWAY_CLIENT_API_KEY (optional, defaults to shared secret)",
+    "  SLACK_GATEWAY_PUBLIC_ONBOARD=true  # allow tokenless onboarding endpoint",
+    "  SLACK_GATEWAY_PUBLIC_ONBOARD_API_KEY=<client key>  # optional, used when gateway is not fully public",
+    "  SLACK_GATEWAY_PUBLIC_ONBOARD_EXPOSE_API_KEY=true   # fallback: expose client key as-is",
     "  SLACK_OAUTH_BOT_SCOPES, SLACK_OAUTH_USER_SCOPES",
     "",
     "Client env vars (mcp caller-side):",
@@ -1507,6 +1679,12 @@ function runGatewayInvite(args) {
   const onboardScriptUrl = `${gatewayBaseUrl}/onboard.ps1?token=${encodeURIComponent(token)}`;
   const oauthStartUrl = buildOauthStartUrlFromInvitePayload(gatewayBaseUrl, payload);
   const command = `powershell -ExecutionPolicy Bypass -Command "irm '${onboardScriptUrl}' | iex"`;
+  const commandCurlFallback = [
+    `$tmp = Join-Path $env:TEMP 'slack-onboard.ps1'`,
+    `curl.exe -k -sS '${onboardScriptUrl}' -o $tmp`,
+    `powershell -ExecutionPolicy Bypass -File $tmp`,
+    `Remove-Item $tmp -Force`,
+  ].join("; ");
 
   console.log("[gateway] invite token created");
   console.log(`[gateway] expires_at: ${new Date(Number(payload.exp)).toISOString()}`);
@@ -1514,6 +1692,8 @@ function runGatewayInvite(args) {
   console.log(`[gateway] oauth_start_url: ${oauthStartUrl}`);
   console.log("[gateway] one-click command for team member:");
   console.log(command);
+  console.log("[gateway] fallback command (self-signed TLS):");
+  console.log(commandCurlFallback);
 }
 
 async function runGatewayCli(args) {

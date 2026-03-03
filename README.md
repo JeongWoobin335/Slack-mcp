@@ -110,8 +110,36 @@ setx SLACK_GATEWAY_PORT "8790"
 setx SLACK_GATEWAY_PUBLIC_BASE_URL "https://your-gateway.example.com"
 setx SLACK_GATEWAY_SHARED_SECRET "long-random-shared-secret"
 setx SLACK_GATEWAY_CLIENT_API_KEY "long-random-client-api-key"
+setx SLACK_GATEWAY_PUBLIC_ONBOARD "true"
+setx SLACK_GATEWAY_PUBLIC_ONBOARD_API_KEY "long-random-client-api-key"
 npx -y slack-max-api-mcp gateway start
 ```
+
+주의:
+1. `SLACK_GATEWAY_PUBLIC_ONBOARD=true`는 토큰 없는 온보딩을 허용합니다.
+2. 게이트웨이가 비공개(`SLACK_GATEWAY_ALLOW_PUBLIC=false`)라면 `SLACK_GATEWAY_PUBLIC_ONBOARD_API_KEY`를 함께 설정해야 팀원 로컬 클라이언트가 API 호출할 수 있습니다.
+
+### 팀원 경험 (토큰 전달 없이 권장)
+
+```powershell
+$env:NODE_TLS_REJECT_UNAUTHORIZED='0'
+npx -y slack-max-api-mcp onboard run --gateway "https://your-gateway.example.com"
+Remove-Item Env:NODE_TLS_REJECT_UNAUTHORIZED
+```
+
+자동 동작:
+1. 로컬 클라이언트 설정 파일(`~/.slack-max-api-mcp/client.json`) 작성
+2. 브라우저 OAuth 승인 페이지 자동 오픈
+3. Slack Allow 승인
+4. 완료 후 Codex에서 바로 사용
+
+승인 후 Codex 연결(최초 1회):
+
+```powershell
+codex mcp add slack-max -- npx -y slack-max-api-mcp
+```
+
+### 팀원 경험 (초대토큰 기반, 기존 방식)
 
 운영자가 팀원용 원클릭 초대 커맨드 생성:
 
@@ -121,21 +149,8 @@ npx -y slack-max-api-mcp gateway invite --profile woobin --team T0AHNJ8QN0N
 
 위 명령이 팀원에게 전달할 "원클릭 설치 커맨드"를 출력합니다.
 
-### 팀원 경험 (입력값 없이 원클릭)
-
 ```powershell
 powershell -ExecutionPolicy Bypass -Command "irm 'https://your-gateway.example.com/onboard.ps1?token=...' | iex"
-```
-
-스크립트가 자동으로 수행:
-1. `slack-max-api-mcp` 설치
-2. 로컬 클라이언트 설정 파일(`~/.slack-max-api-mcp/client.json`) 작성
-3. 브라우저 OAuth 승인 페이지 자동 오픈
-
-승인 후 Codex 연결(최초 1회):
-
-```powershell
-codex mcp add slack-max -- npx -y slack-max-api-mcp
 ```
 
 ### 팀원 경험 (설치 후 `slack-max-api-mcp`만 실행)
@@ -156,6 +171,7 @@ slack-max-api-mcp
 필요한 사전 배포값(팀원이 직접 입력하지 않아도 됨):
 1. `SLACK_AUTO_ONBOARD_URL` 또는
 2. `SLACK_AUTO_ONBOARD_GATEWAY` + `SLACK_AUTO_ONBOARD_TOKEN`
+3. 토큰 없는 자동 온보딩은 `SLACK_AUTO_ONBOARD_GATEWAY` 단독도 가능 (게이트웨이 `SLACK_GATEWAY_PUBLIC_ONBOARD=true` 필요)
 
 ## 2) 단독/개인 운영: 로컬 OAuth 모드
 
