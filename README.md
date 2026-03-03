@@ -91,26 +91,100 @@ claude mcp add slack-max -- npx -y slack-max-api-mcp
 claude mcp list
 ```
 
-## 필수 환경 설정 (중요)
+## 인증 설정
 
-이 패키지는 실제 토큰을 포함하지 않습니다. 실행 환경에 토큰을 넣어야 합니다.
+## 1) 팀 운영 권장: 중앙 Gateway 모드
 
-### 예시 (Windows PowerShell)
+핵심:
+1. `SLACK_CLIENT_SECRET`은 중앙 서버에만 둡니다.
+2. 각 사용자 로컬에는 Slack 토큰을 두지 않습니다.
+3. OAuth 승인으로 중앙 저장소(`~/.slack-max-api-mcp/tokens.json`)에 사용자별 토큰이 저장됩니다.
+
+### 중앙 서버(1대) 설정
+
+```powershell
+setx SLACK_CLIENT_ID "YOUR_CLIENT_ID"
+setx SLACK_CLIENT_SECRET "YOUR_CLIENT_SECRET"
+setx SLACK_GATEWAY_HOST "0.0.0.0"
+setx SLACK_GATEWAY_PORT "8790"
+setx SLACK_GATEWAY_PUBLIC_BASE_URL "https://your-gateway.example.com"
+setx SLACK_GATEWAY_SHARED_SECRET "long-random-shared-secret"
+setx SLACK_GATEWAY_CLIENT_API_KEY "long-random-client-api-key"
+npx -y slack-max-api-mcp gateway start
+```
+
+운영자가 팀원용 원클릭 초대 커맨드 생성:
+
+```powershell
+npx -y slack-max-api-mcp gateway invite --profile woobin --team T0AHNJ8QN0N
+```
+
+위 명령이 팀원에게 전달할 "원클릭 설치 커맨드"를 출력합니다.
+
+### 팀원 경험 (입력값 없이 원클릭)
+
+```powershell
+powershell -ExecutionPolicy Bypass -Command "irm 'https://your-gateway.example.com/onboard.ps1?token=...' | iex"
+```
+
+스크립트가 자동으로 수행:
+1. `slack-max-api-mcp` 설치
+2. 로컬 클라이언트 설정 파일(`~/.slack-max-api-mcp/client.json`) 작성
+3. 브라우저 OAuth 승인 페이지 자동 오픈
+
+승인 후 Codex 연결(최초 1회):
+
+```powershell
+codex mcp add slack-max -- npx -y slack-max-api-mcp
+```
+
+### 팀원 경험 (설치 후 `slack-max-api-mcp`만 실행)
+
+운영자가 아래 값을 사전에 배포(이미지/스크립트/MDM)하면 팀원은 다음만 수행하면 됩니다.
+
+```powershell
+npm install -g slack-max-api-mcp@latest
+slack-max-api-mcp
+```
+
+자동 동작:
+1. 대화형 터미널에서 인증 설정이 비어 있으면 자동 온보딩 트리거
+2. 브라우저 자동 오픈
+3. Slack Allow 승인
+4. 완료 후 Codex에서 바로 사용
+
+필요한 사전 배포값(팀원이 직접 입력하지 않아도 됨):
+1. `SLACK_AUTO_ONBOARD_URL` 또는
+2. `SLACK_AUTO_ONBOARD_GATEWAY` + `SLACK_AUTO_ONBOARD_TOKEN`
+
+## 2) 단독/개인 운영: 로컬 OAuth 모드
+
+```powershell
+setx SLACK_CLIENT_ID "YOUR_CLIENT_ID"
+setx SLACK_CLIENT_SECRET "YOUR_CLIENT_SECRET"
+npx -y slack-max-api-mcp oauth login --profile my-workspace --team T1234567890
+```
+
+토큰은 기본적으로 `~/.slack-max-api-mcp/tokens.json`에 저장됩니다.
+
+## 3) 수동 토큰 모드 (대안)
 
 ```powershell
 setx SLACK_BOT_TOKEN "xoxb-..."
 setx SLACK_USER_TOKEN "xoxp-..."
 ```
 
-새 터미널을 열고 실행하세요.
-
 ### 토큰 선택 우선순위
 
-서버 기본 토큰 우선순위:
-1. `SLACK_BOT_TOKEN`
-2. `SLACK_USER_TOKEN`
-3. `SLACK_TOKEN`
-4. (로컬 `.env.example` 값이 있으면 fallback)
+1. 도구 입력의 `token_override`
+2. Gateway 모드가 켜진 경우: 로컬 `client.json` 또는 env의 Gateway 설정으로 중앙 호출
+3. Gateway 미사용 시: 로컬 환경변수 (`SLACK_BOT_TOKEN` / `SLACK_USER_TOKEN` / `SLACK_TOKEN`)
+4. OAuth 토큰 저장소의 활성 프로필 (`SLACK_PROFILE` 또는 기본 프로필)
+5. `.env.example` fallback (`SLACK_ALLOW_ENV_EXAMPLE_FALLBACK=true`일 때만)
+
+참고:
+1. 기본 토큰 타입 우선순위는 `SLACK_DEFAULT_TOKEN_TYPE`으로 조정할 수 있음 (`bot` 기본값, `user`, `generic`, `auto` 지원)
+2. `not_allowed_token_type`, `missing_scope` 오류 시 서버가 자동으로 다른 후보 토큰을 재시도함
 
 ## 실제 요청 예시 (Codex/Claude에 자연어로)
 
@@ -125,12 +199,13 @@ setx SLACK_USER_TOKEN "xoxp-..."
 
 ## 제약 사항과 운영 주의
 
-1. 토큰은 반드시 사용자 환경에 직접 설정해야 함
-2. 다른 워크스페이스를 쓰려면 해당 워크스페이스 토큰으로 교체해야 함
+1. 중앙 Gateway 모드에서는 `SLACK_GATEWAY_SHARED_SECRET` 유출 시 즉시 교체해야 함
+2. OAuth든 수동 토큰이든, 토큰 관리 책임은 운영자에게 있음 (노출 시 즉시 회수/재발급)
 3. scope 변경 후에는 Slack 앱 재설치(재승인)가 필요할 수 있음
 4. 채널 읽기/전송은 봇/사용자 멤버십이 없으면 실패 가능 (`not_in_channel`)
 5. 일부 API는 Enterprise 또는 Admin 권한 전용
 6. Slack rate limit에 걸릴 수 있음
+7. OAuth 저장소(`~/.slack-max-api-mcp/tokens.json`)를 공유 드라이브에 두면 보안 위험이 커짐
 
 ## 보안 주의
 
@@ -152,6 +227,9 @@ npm install
 npm run check
 npm run build:catalog
 npm run start
+node src/slack-mcp-server.js oauth help
+node src/slack-mcp-server.js gateway help
+node src/slack-mcp-server.js onboard help
 ```
 
 관련 파일:
