@@ -6,6 +6,7 @@ const http = require("node:http");
 const path = require("node:path");
 const crypto = require("node:crypto");
 const { spawn } = require("node:child_process");
+const { Agent, fetch: undiciFetch } = require("undici");
 const { McpServer } = require("@modelcontextprotocol/sdk/server/mcp.js");
 const { StdioServerTransport } = require("@modelcontextprotocol/sdk/server/stdio.js");
 const { z } = require("zod");
@@ -57,8 +58,20 @@ const GATEWAY_PUBLIC_ONBOARD_PROFILE_PREFIX =
 const GATEWAY_STATE_TTL_MS = Number(process.env.SLACK_GATEWAY_STATE_TTL_MS || 15 * 60 * 1000);
 const INVITE_TOKEN_DEFAULT_DAYS = Number(process.env.SLACK_INVITE_TOKEN_DEFAULT_DAYS || 7);
 const AUTO_ONBOARD_ENABLED = process.env.SLACK_AUTO_ONBOARD !== "false";
+const DEFAULT_TEAM_GATEWAY_URL =
+  process.env.SLACK_DEFAULT_TEAM_GATEWAY_URL || "https://43.202.54.65.sslip.io";
+const DEFAULT_TEAM_GATEWAY_INSECURE_TLS =
+  process.env.SLACK_DEFAULT_TEAM_GATEWAY_INSECURE_TLS !== "false";
+const GATEWAY_INSECURE_TLS =
+  process.env.SLACK_GATEWAY_INSECURE_TLS === "true"
+    ? true
+    : process.env.SLACK_GATEWAY_INSECURE_TLS === "false"
+    ? false
+    : null;
 const AUTO_ONBOARD_GATEWAY =
-  process.env.SLACK_AUTO_ONBOARD_GATEWAY || process.env.SLACK_ONBOARD_GATEWAY_URL || "";
+  process.env.SLACK_AUTO_ONBOARD_GATEWAY ||
+  process.env.SLACK_ONBOARD_GATEWAY_URL ||
+  DEFAULT_TEAM_GATEWAY_URL;
 const AUTO_ONBOARD_PROFILE = process.env.SLACK_AUTO_ONBOARD_PROFILE || "";
 const AUTO_ONBOARD_TOKEN = process.env.SLACK_AUTO_ONBOARD_TOKEN || process.env.SLACK_ONBOARD_TOKEN || "";
 const AUTO_ONBOARD_URL = process.env.SLACK_AUTO_ONBOARD_URL || process.env.SLACK_ONBOARD_URL || "";
@@ -68,6 +81,11 @@ const ONBOARD_PACKAGE_SPEC =
   process.env.SLACK_ONBOARD_INSTALL_SPEC ||
   "slack-max-api-mcp@latest";
 const ONBOARD_SKIP_TLS_VERIFY = process.env.SLACK_ONBOARD_SKIP_TLS_VERIFY === "true";
+const INSECURE_TLS_DISPATCHER = new Agent({
+  connect: {
+    rejectUnauthorized: false,
+  },
+});
 
 function parseSimpleEnvFile(filePath) {
   if (!fs.existsSync(filePath)) return {};
@@ -125,6 +143,33 @@ function createAutoOnboardProfileName(prefix = "auto") {
 function ensureParentDirectory(filePath) {
   const dirPath = path.dirname(filePath);
   fs.mkdirSync(dirPath, { recursive: true });
+}
+
+function normalizeBaseUrl(url) {
+  return String(url || "").trim().replace(/\/+$/, "");
+}
+
+function normalizeUrlOrigin(url) {
+  try {
+    const parsed = new URL(String(url || "").trim());
+    return `${parsed.protocol}//${parsed.host}`.replace(/\/+$/, "");
+  } catch {
+    return normalizeBaseUrl(url);
+  }
+}
+
+function shouldUseInsecureGatewayTls(url) {
+  if (!url) return false;
+  if (GATEWAY_INSECURE_TLS !== null) return GATEWAY_INSECURE_TLS;
+  if (!DEFAULT_TEAM_GATEWAY_INSECURE_TLS) return false;
+  return normalizeUrlOrigin(url) === normalizeUrlOrigin(DEFAULT_TEAM_GATEWAY_URL);
+}
+
+async function fetchWithOptionalInsecureGatewayTls(url, options) {
+  if (!shouldUseInsecureGatewayTls(url)) {
+    return undiciFetch(url, options);
+  }
+  return undiciFetch(url, { ...(options || {}), dispatcher: INSECURE_TLS_DISPATCHER });
 }
 
 function emptyTokenStore() {
@@ -354,7 +399,8 @@ async function callSlackApiViaGateway(method, params = {}, tokenOverride, option
     throw new Error("Gateway URL is missing. Set SLACK_GATEWAY_URL to use gateway mode.");
   }
 
-  const response = await fetch(`${runtimeGateway.url}/api/slack/call`, {
+  const gatewayCallUrl = `${runtimeGateway.url}/api/slack/call`;
+  const response = await fetchWithOptionalInsecureGatewayTls(gatewayCallUrl, {
     method: "POST",
     headers: buildGatewayAuthHeaders(runtimeGateway.apiKey),
     body: JSON.stringify({
@@ -404,7 +450,8 @@ async function slackHttpViaGateway(input) {
     throw new Error("Gateway URL is missing. Set SLACK_GATEWAY_URL to use gateway mode.");
   }
 
-  const response = await fetch(`${runtimeGateway.url}/api/slack/http`, {
+  const gatewayHttpUrl = `${runtimeGateway.url}/api/slack/http`;
+  const response = await fetchWithOptionalInsecureGatewayTls(gatewayHttpUrl, {
     method: "POST",
     headers: buildGatewayAuthHeaders(runtimeGateway.apiKey),
     body: JSON.stringify({
@@ -1018,11 +1065,12 @@ function printOnboardHelp() {
     "Slack Max onboarding helper",
     "",
     "Usage:",
-    "  slack-max-api-mcp onboard run --gateway https://gateway.example.com [--token <invite_token>]",
+    "  slack-max-api-mcp onboard run [--gateway https://gateway.example.com] [--token <invite_token>]",
     "    [--profile NAME] [--team T123] [--scope a,b] [--user-scope c,d]",
-    "  slack-max-api-mcp onboard quick --gateway https://gateway.example.com",
+    "  slack-max-api-mcp onboard quick [--gateway https://gateway.example.com]",
     "  slack-max-api-mcp onboard help",
     "",
+    `Default gateway (if omitted): ${DEFAULT_TEAM_GATEWAY_URL}`,
     "If --token is omitted, it uses gateway public onboarding endpoint (/onboard/bootstrap).",
     "This command writes local client config and opens the Slack OAuth approval page automatically.",
   ];
@@ -1031,11 +1079,11 @@ function printOnboardHelp() {
 
 async function runOnboardStart(args) {
   const { options } = parseCliArgs(args);
-  const gateway = String(options.gateway || options.url || "").replace(/\/+$/, "");
+  const gateway = normalizeBaseUrl(options.gateway || options.url || DEFAULT_TEAM_GATEWAY_URL);
   const token = String(options.token || "");
   if (!gateway) {
     throw new Error(
-      "Usage: slack-max-api-mcp onboard run --gateway <url> [--token <invite_token>] [--profile <name>]"
+      "Usage: slack-max-api-mcp onboard run [--gateway <url>] [--token <invite_token>] [--profile <name>]"
     );
   }
 
@@ -1057,7 +1105,7 @@ async function runOnboardStart(args) {
         return `${gateway}/onboard/bootstrap${query ? `?${query}` : ""}`;
       })();
 
-  const response = await fetch(onboardingUrl, {
+  const response = await fetchWithOptionalInsecureGatewayTls(onboardingUrl, {
     method: "GET",
     headers: { Accept: "application/json" },
   });

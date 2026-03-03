@@ -69,6 +69,15 @@ npm install -g slack-max-api-mcp@latest
 slack-max-api-mcp
 ```
 
+팀원 기본 온보딩(현재 패키지 기본값):
+1. 추가 환경변수 없이 `slack-max-api-mcp` 실행 시 자동 온보딩 시도
+2. 기본 게이트웨이: `https://43.202.54.65.sslip.io`
+3. 승인 후 Codex 등록 1회:
+
+```powershell
+codex mcp add slack-max -- npx -y slack-max-api-mcp
+```
+
 또는:
 
 ```powershell
@@ -122,9 +131,7 @@ npx -y slack-max-api-mcp gateway start
 ### 팀원 경험 (토큰 전달 없이 권장)
 
 ```powershell
-$env:NODE_TLS_REJECT_UNAUTHORIZED='0'
-npx -y slack-max-api-mcp onboard run --gateway "https://your-gateway.example.com"
-Remove-Item Env:NODE_TLS_REJECT_UNAUTHORIZED
+npx -y slack-max-api-mcp onboard run
 ```
 
 자동 동작:
@@ -155,7 +162,7 @@ powershell -ExecutionPolicy Bypass -Command "irm 'https://your-gateway.example.c
 
 ### 팀원 경험 (설치 후 `slack-max-api-mcp`만 실행)
 
-운영자가 아래 값을 사전에 배포(이미지/스크립트/MDM)하면 팀원은 다음만 수행하면 됩니다.
+현재 패키지 기본 게이트웨이(`https://43.202.54.65.sslip.io`)를 계속 사용할 경우 팀원은 다음만 수행하면 됩니다.
 
 ```powershell
 npm install -g slack-max-api-mcp@latest
@@ -168,10 +175,10 @@ slack-max-api-mcp
 3. Slack Allow 승인
 4. 완료 후 Codex에서 바로 사용
 
-필요한 사전 배포값(팀원이 직접 입력하지 않아도 됨):
-1. `SLACK_AUTO_ONBOARD_URL` 또는
-2. `SLACK_AUTO_ONBOARD_GATEWAY` + `SLACK_AUTO_ONBOARD_TOKEN`
-3. 토큰 없는 자동 온보딩은 `SLACK_AUTO_ONBOARD_GATEWAY` 단독도 가능 (게이트웨이 `SLACK_GATEWAY_PUBLIC_ONBOARD=true` 필요)
+게이트웨이 주소를 바꿔야 할 때만(운영자):
+1. `SLACK_DEFAULT_TEAM_GATEWAY_URL`
+2. `SLACK_DEFAULT_TEAM_GATEWAY_INSECURE_TLS` (`true/false`)
+3. 또는 기존 방식대로 `SLACK_AUTO_ONBOARD_URL`, `SLACK_AUTO_ONBOARD_GATEWAY` 사용 가능
 
 ## 2) 단독/개인 운영: 로컬 OAuth 모드
 

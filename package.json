@@ -1,6 +1,6 @@
 {
   "name": "slack-max-api-mcp",
-  "version": "1.0.7",
+  "version": "1.0.8",
   "description": "Slack MCP server (stdio) for Codex and Claude Code",
   "main": "src/slack-mcp-server.js",
   "bin": {
@@ -27,6 +27,7 @@
   "type": "commonjs",
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.27.1",
+    "undici": "^7.16.0",
     "zod": "^4.3.6"
   }
 }
