@@ -6,7 +6,6 @@ const http = require("node:http");
 const path = require("node:path");
 const crypto = require("node:crypto");
 const { spawn } = require("node:child_process");
-const { Agent, fetch: undiciFetch } = require("undici");
 const { McpServer } = require("@modelcontextprotocol/sdk/server/mcp.js");
 const { StdioServerTransport } = require("@modelcontextprotocol/sdk/server/stdio.js");
 const { z } = require("zod");
@@ -19,15 +18,23 @@ const SLACK_API_BASE_URL = process.env.SLACK_API_BASE_URL || "https://slack.com/
 const CATALOG_PATH =
   process.env.SLACK_CATALOG_PATH || path.join(process.cwd(), "data", "slack-catalog.json");
 const METHOD_TOOL_PREFIX = process.env.SLACK_METHOD_TOOL_PREFIX || "slack_method";
-const ENABLE_METHOD_TOOLS = process.env.SLACK_ENABLE_METHOD_TOOLS !== "false";
-const MAX_METHOD_TOOLS = Number(process.env.SLACK_MAX_METHOD_TOOLS || 0);
+const TOOL_EXPOSURE_MODE = normalizeToolExposureMode(process.env.SLACK_TOOL_EXPOSURE_MODE);
+const ENABLE_METHOD_TOOLS = parseBooleanEnv(
+  process.env.SLACK_ENABLE_METHOD_TOOLS,
+  TOOL_EXPOSURE_MODE === "legacy"
+);
+const MAX_METHOD_TOOLS = parseNumberEnv(
+  process.env.SLACK_MAX_METHOD_TOOLS,
+  TOOL_EXPOSURE_MODE === "legacy" ? 0 : 50
+);
+const SMART_COMPAT_CORE_TOOLS = parseBooleanEnv(
+  process.env.SLACK_SMART_COMPAT_CORE_TOOLS,
+  true
+);
 const ENV_EXAMPLE_PATH = path.join(process.cwd(), ".env.example");
 const TOKEN_STORE_PATH =
   process.env.SLACK_TOKEN_STORE_PATH ||
   path.join(os.homedir(), ".slack-max-api-mcp", "tokens.json");
-const CLIENT_CONFIG_PATH =
-  process.env.SLACK_CLIENT_CONFIG_PATH ||
-  path.join(os.homedir(), ".slack-max-api-mcp", "client.json");
 const ALLOW_ENV_EXAMPLE_FALLBACK = process.env.SLACK_ALLOW_ENV_EXAMPLE_FALLBACK === "true";
 const OAUTH_CALLBACK_HOST = process.env.SLACK_OAUTH_CALLBACK_HOST || "127.0.0.1";
 const OAUTH_CALLBACK_PORT = Number(process.env.SLACK_OAUTH_CALLBACK_PORT || 8787);
@@ -39,53 +46,36 @@ const DEFAULT_OAUTH_USER_SCOPES =
   process.env.SLACK_OAUTH_USER_SCOPES ||
   "search:read,channels:read,groups:read,channels:history,groups:history";
 const RETRYABLE_TOKEN_ERRORS = new Set(["not_allowed_token_type", "missing_scope"]);
-const GATEWAY_API_KEY = process.env.SLACK_GATEWAY_API_KEY || "";
-const GATEWAY_PROFILE = process.env.SLACK_GATEWAY_PROFILE || "";
-const GATEWAY_HOST = process.env.SLACK_GATEWAY_HOST || "127.0.0.1";
-const GATEWAY_PORT = Number(process.env.SLACK_GATEWAY_PORT || 8790);
-const GATEWAY_PUBLIC_BASE_URL =
-  process.env.SLACK_GATEWAY_PUBLIC_BASE_URL || `http://${GATEWAY_HOST}:${GATEWAY_PORT}`;
-const GATEWAY_ALLOW_PUBLIC = process.env.SLACK_GATEWAY_ALLOW_PUBLIC === "true";
-const GATEWAY_SHARED_SECRET = process.env.SLACK_GATEWAY_SHARED_SECRET || GATEWAY_API_KEY;
-const GATEWAY_CLIENT_API_KEY =
-  process.env.SLACK_GATEWAY_CLIENT_API_KEY || GATEWAY_API_KEY || GATEWAY_SHARED_SECRET;
-const GATEWAY_PUBLIC_ONBOARD_ENABLED = process.env.SLACK_GATEWAY_PUBLIC_ONBOARD === "true";
-const GATEWAY_PUBLIC_ONBOARD_EXPOSE_API_KEY =
-  process.env.SLACK_GATEWAY_PUBLIC_ONBOARD_EXPOSE_API_KEY === "true";
-const GATEWAY_PUBLIC_ONBOARD_API_KEY = process.env.SLACK_GATEWAY_PUBLIC_ONBOARD_API_KEY || "";
-const GATEWAY_PUBLIC_ONBOARD_PROFILE_PREFIX =
-  process.env.SLACK_GATEWAY_PUBLIC_ONBOARD_PROFILE_PREFIX || "auto";
-const GATEWAY_STATE_TTL_MS = Number(process.env.SLACK_GATEWAY_STATE_TTL_MS || 15 * 60 * 1000);
-const INVITE_TOKEN_DEFAULT_DAYS = Number(process.env.SLACK_INVITE_TOKEN_DEFAULT_DAYS || 7);
-const AUTO_ONBOARD_ENABLED = process.env.SLACK_AUTO_ONBOARD !== "false";
-const DEFAULT_TEAM_GATEWAY_URL =
-  process.env.SLACK_DEFAULT_TEAM_GATEWAY_URL || "https://43.202.54.65.sslip.io";
-const DEFAULT_TEAM_GATEWAY_INSECURE_TLS =
-  process.env.SLACK_DEFAULT_TEAM_GATEWAY_INSECURE_TLS !== "false";
-const GATEWAY_INSECURE_TLS =
-  process.env.SLACK_GATEWAY_INSECURE_TLS === "true"
-    ? true
-    : process.env.SLACK_GATEWAY_INSECURE_TLS === "false"
-    ? false
-    : null;
-const AUTO_ONBOARD_GATEWAY =
-  process.env.SLACK_AUTO_ONBOARD_GATEWAY ||
-  process.env.SLACK_ONBOARD_GATEWAY_URL ||
-  DEFAULT_TEAM_GATEWAY_URL;
-const AUTO_ONBOARD_PROFILE = process.env.SLACK_AUTO_ONBOARD_PROFILE || "";
-const AUTO_ONBOARD_TOKEN = process.env.SLACK_AUTO_ONBOARD_TOKEN || process.env.SLACK_ONBOARD_TOKEN || "";
-const AUTO_ONBOARD_URL = process.env.SLACK_AUTO_ONBOARD_URL || process.env.SLACK_ONBOARD_URL || "";
-const AUTO_ONBOARD_PROFILE_PREFIX = process.env.SLACK_AUTO_ONBOARD_PROFILE_PREFIX || "auto";
-const ONBOARD_PACKAGE_SPEC =
-  process.env.SLACK_ONBOARD_PACKAGE_SPEC ||
-  process.env.SLACK_ONBOARD_INSTALL_SPEC ||
-  "slack-max-api-mcp@latest";
-const ONBOARD_SKIP_TLS_VERIFY = process.env.SLACK_ONBOARD_SKIP_TLS_VERIFY === "true";
-const INSECURE_TLS_DISPATCHER = new Agent({
-  connect: {
-    rejectUnauthorized: false,
-  },
-});
+const DEFAULT_ONBOARD_SERVER_URL = "https://43.202.54.65.sslip.io";
+const ONBOARD_SERVER_URL = process.env.SLACK_ONBOARD_SERVER_URL || DEFAULT_ONBOARD_SERVER_URL;
+const ONBOARD_SERVER_HOST = process.env.SLACK_ONBOARD_SERVER_HOST || "127.0.0.1";
+const ONBOARD_SERVER_PORT = Number(process.env.SLACK_ONBOARD_SERVER_PORT || 8790);
+const ONBOARD_PUBLIC_BASE_URL =
+  process.env.SLACK_ONBOARD_PUBLIC_BASE_URL || `http://${ONBOARD_SERVER_HOST}:${ONBOARD_SERVER_PORT}`;
+const ONBOARD_CALLBACK_PATH = process.env.SLACK_ONBOARD_SERVER_CALLBACK_PATH || OAUTH_CALLBACK_PATH;
+const ONBOARD_CLAIM_TTL_MS = Number(process.env.SLACK_ONBOARD_CLAIM_TTL_MS || 10 * 60 * 1000);
+const ONBOARD_POLL_INTERVAL_MS = Number(process.env.SLACK_ONBOARD_POLL_INTERVAL_MS || 2000);
+const ONBOARD_TIMEOUT_MS = Number(process.env.SLACK_ONBOARD_TIMEOUT_MS || 5 * 60 * 1000);
+function parseBooleanEnv(rawValue, defaultValue) {
+  if (rawValue === undefined || rawValue === null || rawValue === "") return defaultValue;
+  const normalized = String(rawValue).trim().toLowerCase();
+  if (["1", "true", "yes", "on"].includes(normalized)) return true;
+  if (["0", "false", "no", "off"].includes(normalized)) return false;
+  return defaultValue;
+}
+
+function parseNumberEnv(rawValue, defaultValue) {
+  if (rawValue === undefined || rawValue === null || rawValue === "") return defaultValue;
+  const parsed = Number(rawValue);
+  if (!Number.isFinite(parsed)) return defaultValue;
+  return parsed;
+}
+
+function normalizeToolExposureMode(rawValue) {
+  const normalized = String(rawValue || "smart").trim().toLowerCase();
+  if (normalized === "legacy") return "legacy";
+  return "smart";
+}
 
 function parseSimpleEnvFile(filePath) {
   if (!fs.existsSync(filePath)) return {};
@@ -115,61 +105,9 @@ function parseScopeList(raw) {
   return [...new Set(String(raw).split(",").map((part) => part.trim()).filter(Boolean))];
 }
 
-function normalizeOnboardNamePart(value, fallback) {
-  const normalized = String(value || "")
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9_-]+/g, "-")
-    .replace(/^-+|-+$/g, "");
-  if (!normalized) return fallback;
-  return normalized;
-}
-
-function createAutoOnboardProfileName(prefix = "auto") {
-  let username = "user";
-  try {
-    username = os.userInfo().username || process.env.USERNAME || process.env.USER || "user";
-  } catch {
-    username = process.env.USERNAME || process.env.USER || "user";
-  }
-  const host = os.hostname() || "host";
-  const profilePrefix = normalizeOnboardNamePart(prefix, "auto");
-  const userPart = normalizeOnboardNamePart(username, "user");
-  const hostPart = normalizeOnboardNamePart(host, "host");
-  const rand = crypto.randomBytes(3).toString("hex");
-  return `${profilePrefix}-${userPart}-${hostPart}-${rand}`.slice(0, 80);
-}
-
 function ensureParentDirectory(filePath) {
   const dirPath = path.dirname(filePath);
   fs.mkdirSync(dirPath, { recursive: true });
-}
-
-function normalizeBaseUrl(url) {
-  return String(url || "").trim().replace(/\/+$/, "");
-}
-
-function normalizeUrlOrigin(url) {
-  try {
-    const parsed = new URL(String(url || "").trim());
-    return `${parsed.protocol}//${parsed.host}`.replace(/\/+$/, "");
-  } catch {
-    return normalizeBaseUrl(url);
-  }
-}
-
-function shouldUseInsecureGatewayTls(url) {
-  if (!url) return false;
-  if (GATEWAY_INSECURE_TLS !== null) return GATEWAY_INSECURE_TLS;
-  if (!DEFAULT_TEAM_GATEWAY_INSECURE_TLS) return false;
-  return normalizeUrlOrigin(url) === normalizeUrlOrigin(DEFAULT_TEAM_GATEWAY_URL);
-}
-
-async function fetchWithOptionalInsecureGatewayTls(url, options) {
-  if (!shouldUseInsecureGatewayTls(url)) {
-    return undiciFetch(url, options);
-  }
-  return undiciFetch(url, { ...(options || {}), dispatcher: INSECURE_TLS_DISPATCHER });
 }
 
 function emptyTokenStore() {
@@ -199,50 +137,6 @@ function loadTokenStore() {
 function saveTokenStore(store) {
   ensureParentDirectory(TOKEN_STORE_PATH);
   fs.writeFileSync(TOKEN_STORE_PATH, JSON.stringify(normalizeTokenStore(store), null, 2), "utf8");
-}
-
-function emptyClientConfig() {
-  return {
-    version: 1,
-    gateway_url: "",
-    gateway_api_key: "",
-    profile: "",
-    updated_at: "",
-  };
-}
-
-function normalizeClientConfig(value) {
-  if (!value || typeof value !== "object") return emptyClientConfig();
-  return { ...emptyClientConfig(), ...value };
-}
-
-function loadClientConfig() {
-  if (!fs.existsSync(CLIENT_CONFIG_PATH)) return emptyClientConfig();
-  try {
-    const parsed = JSON.parse(fs.readFileSync(CLIENT_CONFIG_PATH, "utf8"));
-    return normalizeClientConfig(parsed);
-  } catch {
-    return emptyClientConfig();
-  }
-}
-
-function saveClientConfig(config) {
-  ensureParentDirectory(CLIENT_CONFIG_PATH);
-  fs.writeFileSync(CLIENT_CONFIG_PATH, JSON.stringify(normalizeClientConfig(config), null, 2), "utf8");
-}
-
-function getRuntimeGatewayConfig() {
-  const config = loadClientConfig();
-  return {
-    url: (process.env.SLACK_GATEWAY_URL || config.gateway_url || "").replace(/\/+$/, ""),
-    apiKey: process.env.SLACK_GATEWAY_API_KEY || config.gateway_api_key || "",
-    profile:
-      process.env.SLACK_PROFILE ||
-      process.env.SLACK_GATEWAY_PROFILE ||
-      config.profile ||
-      GATEWAY_PROFILE ||
-      "",
-  };
 }
 
 function resolveTokenStoreProfileBySelector(store, selector) {
@@ -311,7 +205,7 @@ function getSlackTokenCandidates(tokenOverride, options = {}) {
     const tokenStore = loadTokenStore();
     const activeProfile = resolveTokenStoreProfileBySelector(
       tokenStore,
-      options.profileSelector || process.env.SLACK_PROFILE || GATEWAY_PROFILE
+      options.profileSelector || process.env.SLACK_PROFILE
     );
     if (activeProfile) {
       appendCandidateTokens(
@@ -384,100 +278,6 @@ function toRecordObject(value) {
   return value;
 }
 
-function buildGatewayAuthHeaders(apiKey) {
-  const headers = { "Content-Type": "application/json; charset=utf-8" };
-  if (apiKey) {
-    headers.Authorization = `Bearer ${apiKey}`;
-    headers["X-API-Key"] = apiKey;
-  }
-  return headers;
-}
-
-async function callSlackApiViaGateway(method, params = {}, tokenOverride, options = {}) {
-  const runtimeGateway = getRuntimeGatewayConfig();
-  if (!runtimeGateway.url) {
-    throw new Error("Gateway URL is missing. Set SLACK_GATEWAY_URL to use gateway mode.");
-  }
-
-  const gatewayCallUrl = `${runtimeGateway.url}/api/slack/call`;
-  const response = await fetchWithOptionalInsecureGatewayTls(gatewayCallUrl, {
-    method: "POST",
-    headers: buildGatewayAuthHeaders(runtimeGateway.apiKey),
-    body: JSON.stringify({
-      method,
-      params,
-      token_override: tokenOverride || undefined,
-      profile_selector: options.profileSelector || runtimeGateway.profile || undefined,
-      preferred_token_type: options.preferredTokenType || process.env.SLACK_DEFAULT_TOKEN_TYPE || undefined,
-    }),
-  });
-
-  const text = await response.text();
-  let body;
-  try {
-    body = JSON.parse(text);
-  } catch {
-    throw new Error(`Gateway returned non-JSON for ${method} (HTTP ${response.status}).`);
-  }
-
-  if (!response.ok) {
-    const error = new Error(
-      `Gateway HTTP ${response.status} for ${method}: ${body?.error || body?.message || "unknown_error"}`
-    );
-    error.http_status = response.status;
-    error.slack_error = body?.slack_error || body?.error || "gateway_error";
-    error.needed = body?.needed;
-    error.provided = body?.provided;
-    error.token_source = body?.token_source || "gateway";
-    throw error;
-  }
-
-  if (!body?.ok) {
-    const error = new Error(`Gateway call failed for ${method}: ${body?.error || "unknown_error"}`);
-    error.slack_error = body?.slack_error || body?.error || "gateway_error";
-    error.needed = body?.needed;
-    error.provided = body?.provided;
-    error.token_source = body?.token_source || "gateway";
-    throw error;
-  }
-
-  return body.data;
-}
-
-async function slackHttpViaGateway(input) {
-  const runtimeGateway = getRuntimeGatewayConfig();
-  if (!runtimeGateway.url) {
-    throw new Error("Gateway URL is missing. Set SLACK_GATEWAY_URL to use gateway mode.");
-  }
-
-  const gatewayHttpUrl = `${runtimeGateway.url}/api/slack/http`;
-  const response = await fetchWithOptionalInsecureGatewayTls(gatewayHttpUrl, {
-    method: "POST",
-    headers: buildGatewayAuthHeaders(runtimeGateway.apiKey),
-    body: JSON.stringify({
-      ...input,
-      profile_selector: input.profile_selector || runtimeGateway.profile || undefined,
-      preferred_token_type: input.preferred_token_type || process.env.SLACK_DEFAULT_TOKEN_TYPE || undefined,
-    }),
-  });
-
-  const text = await response.text();
-  let body;
-  try {
-    body = JSON.parse(text);
-  } catch {
-    throw new Error(`Gateway returned non-JSON for HTTP proxy (HTTP ${response.status}).`);
-  }
-
-  if (!response.ok) {
-    throw new Error(`Gateway HTTP ${response.status}: ${body?.error || "gateway_error"}`);
-  }
-  if (!body?.ok) {
-    throw new Error(`Gateway HTTP proxy failed: ${body?.error || "gateway_error"}`);
-  }
-  return body.data;
-}
-
 async function callSlackApiWithToken(method, params = {}, token, tokenSource) {
   const url = `${SLACK_API_BASE_URL.replace(/\/+$/, "")}/${method}`;
 
@@ -548,15 +348,10 @@ async function callSlackApiWithCandidates(method, params, candidates) {
 }
 
 async function callSlackApi(method, params = {}, tokenOverride, options = {}) {
-  const runtimeGateway = getRuntimeGatewayConfig();
-  if (runtimeGateway.url) {
-    return callSlackApiViaGateway(method, params, tokenOverride, options);
-  }
-
   const candidates = getSlackTokenCandidates(tokenOverride, options);
   if (candidates.length === 0) {
     throw new Error(
-      "Slack token is missing. Set SLACK_BOT_TOKEN/SLACK_USER_TOKEN/SLACK_TOKEN or run `slack-max-api-mcp oauth login`."
+      "Slack token is missing. Set SLACK_BOT_TOKEN/SLACK_USER_TOKEN/SLACK_TOKEN or run slack-max-api-mcp oauth login."
     );
   }
 
@@ -619,118 +414,6 @@ function parseCliArgs(argv) {
   }
 
   return { options, positionals };
-}
-
-function base64UrlEncodeString(value) {
-  return Buffer.from(value, "utf8")
-    .toString("base64")
-    .replace(/\+/g, "-")
-    .replace(/\//g, "_")
-    .replace(/=+$/g, "");
-}
-
-function base64UrlDecodeToString(value) {
-  const padded = value.replace(/-/g, "+").replace(/_/g, "/").padEnd(Math.ceil(value.length / 4) * 4, "=");
-  return Buffer.from(padded, "base64").toString("utf8");
-}
-
-function hmacSign(text, secret) {
-  return crypto
-    .createHmac("sha256", secret)
-    .update(text)
-    .digest("base64")
-    .replace(/\+/g, "-")
-    .replace(/\//g, "_")
-    .replace(/=+$/g, "");
-}
-
-function createSignedInviteToken(payload, secret) {
-  const encodedPayload = base64UrlEncodeString(JSON.stringify(payload));
-  const signature = hmacSign(encodedPayload, secret);
-  return `${encodedPayload}.${signature}`;
-}
-
-function parseAndVerifyInviteToken(token, secret) {
-  const [encodedPayload, signature] = String(token || "").split(".", 2);
-  if (!encodedPayload || !signature) {
-    throw new Error("Invalid invite token format.");
-  }
-  const expected = hmacSign(encodedPayload, secret);
-  const expectedBuf = Buffer.from(expected, "utf8");
-  const sigBuf = Buffer.from(signature, "utf8");
-  if (expectedBuf.length !== sigBuf.length || !crypto.timingSafeEqual(expectedBuf, sigBuf)) {
-    throw new Error("Invalid invite token signature.");
-  }
-  let payload;
-  try {
-    payload = JSON.parse(base64UrlDecodeToString(encodedPayload));
-  } catch {
-    throw new Error("Invalid invite token payload.");
-  }
-  if (typeof payload !== "object" || !payload) {
-    throw new Error("Invalid invite token payload object.");
-  }
-  if (!payload.exp || Number(payload.exp) < Date.now()) {
-    throw new Error("Invite token expired.");
-  }
-  return payload;
-}
-
-function requireGatewayInviteSecret() {
-  if (!GATEWAY_SHARED_SECRET) {
-    throw new Error("Set SLACK_GATEWAY_SHARED_SECRET before using gateway invite/onboarding.");
-  }
-  return GATEWAY_SHARED_SECRET;
-}
-
-function isInteractiveTerminal() {
-  return Boolean(process.stdin.isTTY && process.stdout.isTTY);
-}
-
-function hasAnyLocalAuthMaterial() {
-  const runtimeGateway = getRuntimeGatewayConfig();
-  if (runtimeGateway.url) return true;
-  const tokenCandidates = getSlackTokenCandidates(undefined, {
-    includeEnvTokens: true,
-    includeTokenStore: true,
-  });
-  return tokenCandidates.length > 0;
-}
-
-async function runAutoOnboardingIfPossible() {
-  if (!AUTO_ONBOARD_ENABLED) return false;
-  if (!isInteractiveTerminal()) return false;
-  if (hasAnyLocalAuthMaterial()) return false;
-
-  if (AUTO_ONBOARD_URL) {
-    const opened = openExternalUrl(AUTO_ONBOARD_URL);
-    if (!opened) {
-      console.log(`[auto-onboard] Open this URL in browser:\n${AUTO_ONBOARD_URL}`);
-    } else {
-      console.log("[auto-onboard] Browser opened for onboarding.");
-    }
-    return true;
-  }
-
-  if (AUTO_ONBOARD_GATEWAY && AUTO_ONBOARD_TOKEN) {
-    const args = ["--gateway", AUTO_ONBOARD_GATEWAY, "--token", AUTO_ONBOARD_TOKEN];
-    if (AUTO_ONBOARD_PROFILE) args.push("--profile", AUTO_ONBOARD_PROFILE);
-    await runOnboardStart(args);
-    return true;
-  }
-
-  if (AUTO_ONBOARD_GATEWAY) {
-    const args = ["--gateway", AUTO_ONBOARD_GATEWAY];
-    if (AUTO_ONBOARD_PROFILE) {
-      args.push("--profile", AUTO_ONBOARD_PROFILE);
-    } else if (AUTO_ONBOARD_PROFILE_PREFIX) {
-      args.push("--profile", createAutoOnboardProfileName(AUTO_ONBOARD_PROFILE_PREFIX));
-    }
-    await runOnboardStart(args);
-    return true;
-  }
-
-  return false;
 }
 
 function printOauthHelp() {
@@ -1060,118 +743,8 @@ async function runOauthCli(args) {
   throw new Error(`Unknown oauth command: ${subcommand}`);
 }
 
-function printOnboardHelp() {
-  const lines = [
-    "Slack Max onboarding helper",
-    "",
-    "Usage:",
-    "  slack-max-api-mcp onboard run [--gateway https://gateway.example.com] [--token <invite_token>]",
-    "    [--profile NAME] [--team T123] [--scope a,b] [--user-scope c,d]",
-    "  slack-max-api-mcp onboard quick [--gateway https://gateway.example.com]",
-    "  slack-max-api-mcp onboard help",
-    "",
-    `Default gateway (if omitted): ${DEFAULT_TEAM_GATEWAY_URL}`,
-    "If --token is omitted, it uses gateway public onboarding endpoint (/onboard/bootstrap).",
-    "This command writes local client config and opens the Slack OAuth approval page automatically.",
-  ];
-  console.log(lines.join("\n"));
-}
-
-async function runOnboardStart(args) {
-  const { options } = parseCliArgs(args);
-  const gateway = normalizeBaseUrl(options.gateway || options.url || DEFAULT_TEAM_GATEWAY_URL);
-  const token = String(options.token || "");
-  if (!gateway) {
-    throw new Error(
-      "Usage: slack-max-api-mcp onboard run [--gateway <url>] [--token <invite_token>] [--profile <name>]"
-    );
-  }
-
-  const requestedProfile =
-    String(options.profile || "").trim() || createAutoOnboardProfileName(AUTO_ONBOARD_PROFILE_PREFIX);
-  const requestedTeam = String(options.team || "").trim();
-  const requestedScope = parseScopeList(options.scope || "").join(",");
-  const requestedUserScope = parseScopeList(options["user-scope"] || options.user_scope || "").join(",");
-
-  const onboardingUrl = token
-    ? `${gateway}/onboard/resolve?token=${encodeURIComponent(token)}`
-    : (() => {
-        const params = new URLSearchParams();
-        if (requestedProfile) params.set("profile", requestedProfile);
-        if (requestedTeam) params.set("team", requestedTeam);
-        if (requestedScope) params.set("scope", requestedScope);
-        if (requestedUserScope) params.set("user_scope", requestedUserScope);
-        const query = params.toString();
-        return `${gateway}/onboard/bootstrap${query ? `?${query}` : ""}`;
-      })();
-
-  const response = await fetchWithOptionalInsecureGatewayTls(onboardingUrl, {
-    method: "GET",
-    headers: { Accept: "application/json" },
-  });
-
-  const text = await response.text();
-  let data;
-  try {
-    data = JSON.parse(text);
-  } catch {
-    throw new Error(`Onboarding response was non-JSON (HTTP ${response.status}).`);
-  }
-
-  if (!response.ok || !data?.ok) {
-    if (!token && response.status === 404) {
-      throw new Error("Onboarding failed: public onboarding is disabled on gateway (enable SLACK_GATEWAY_PUBLIC_ONBOARD=true).");
-    }
-    throw new Error(`Onboarding failed: ${data?.error || `http_${response.status}`}`);
-  }
-
-  const resolvedGatewayUrl = String(data.gateway_url || gateway).replace(/\/+$/, "");
-  const resolvedApiKey = String(data.gateway_api_key || "");
-  const profile = String(data.profile || requestedProfile || "");
-  const oauthStartUrl = String(data.oauth_start_url || "");
-
-  if (data.requires_gateway_api_key && !resolvedApiKey) {
-    throw new Error(
-      "Gateway requires API key but onboarding response did not provide one. Enable public gateway access or set SLACK_GATEWAY_PUBLIC_ONBOARD_API_KEY."
-    );
-  }
-
-  saveClientConfig({
-    version: 1,
-    gateway_url: resolvedGatewayUrl,
-    gateway_api_key: resolvedApiKey,
-    profile,
-    updated_at: new Date().toISOString(),
-  });
-
-  if (oauthStartUrl) {
-    const opened = openExternalUrl(oauthStartUrl);
-    if (!opened) {
-      console.log(`[onboard] Open this URL in browser:\n${oauthStartUrl}`);
-    }
-  }
-
-  console.log(`[onboard] client config saved: ${CLIENT_CONFIG_PATH}`);
-  console.log(`[onboard] gateway: ${resolvedGatewayUrl}`);
-  if (profile) console.log(`[onboard] profile: ${profile}`);
-  if (data.mode === "public_onboard") {
-    console.log("[onboard] mode: public_onboard (tokenless)");
-  }
-  console.log("[onboard] Next: approve in browser, then use Codex MCP as usual.");
-}
-
-async function runOnboardCli(args) {
-  const subcommand = (args[0] || "help").toLowerCase();
-  const rest = args.slice(1);
-  if (subcommand === "help" || subcommand === "--help" || subcommand === "-h") {
-    printOnboardHelp();
-    return;
-  }
-  if (subcommand === "run" || subcommand === "start" || subcommand === "quick") {
-    await runOnboardStart(rest);
-    return;
-  }
-  throw new Error(`Unknown onboard command: ${subcommand}`);
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 function sendText(res, statusCode, text) {
@@ -1184,332 +757,189 @@ function sendJson(res, statusCode, payload) {
   res.end(JSON.stringify(payload, null, 2));
 }
 
-async function readRequestText(req, maxBytes = 1024 * 1024) {
-  return new Promise((resolve, reject) => {
-    const chunks = [];
-    let total = 0;
-    req.on("data", (chunk) => {
-      total += chunk.length;
-      if (total > maxBytes) {
-        reject(new Error("Request body too large."));
-        req.destroy();
-        return;
-      }
-      chunks.push(chunk);
-    });
-    req.on("end", () => resolve(Buffer.concat(chunks).toString("utf8")));
-    req.on("error", (error) => reject(error));
-  });
+function isClaimSessionExpired(session) {
+  return !session || Date.now() > Number(session.expires_at || 0);
 }
 
-async function readRequestJson(req, maxBytes) {
-  const text = await readRequestText(req, maxBytes);
-  if (!text.trim()) return {};
+function cleanupExpiredClaimSessions(claimSessions, stateToClaim) {
+  for (const [claimToken, session] of claimSessions.entries()) {
+    if (!isClaimSessionExpired(session)) continue;
+    claimSessions.delete(claimToken);
+    if (session.state) stateToClaim.delete(session.state);
+  }
+}
+
+async function fetchJsonResponse(url, options, label) {
+  const response = await fetch(url, options);
+  const rawText = await response.text();
+  let data;
   try {
-    return JSON.parse(text);
+    data = JSON.parse(rawText);
   } catch {
-    throw new Error("Invalid JSON body.");
+    throw new Error(`${label} returned non-JSON (HTTP ${response.status}).`);
   }
-}
-
-function getRequestApiKey(req) {
-  const authHeader = req.headers.authorization || "";
-  if (authHeader.toLowerCase().startsWith("bearer ")) {
-    return authHeader.slice(7).trim();
+  if (!response.ok || !data?.ok) {
+    throw new Error(`${label} failed: ${data?.error || `http_${response.status}`}`);
   }
-  const xApiKey = req.headers["x-api-key"];
-  return typeof xApiKey === "string" ? xApiKey.trim() : "";
+  return data;
 }
 
-function isGatewayAuthorized(req) {
-  if (GATEWAY_ALLOW_PUBLIC) return true;
-  const allowedKeys = [GATEWAY_SHARED_SECRET, GATEWAY_CLIENT_API_KEY].filter(Boolean);
-  if (allowedKeys.length === 0) return false;
-  const provided = getRequestApiKey(req);
-  return Boolean(provided && allowedKeys.includes(provided));
-}
-
-function requireGatewayClientCredentials() {
-  const clientId = process.env.SLACK_CLIENT_ID || "";
-  const clientSecret = process.env.SLACK_CLIENT_SECRET || "";
-  if (!clientId || !clientSecret) {
-    throw new Error("Gateway OAuth requires SLACK_CLIENT_ID and SLACK_CLIENT_SECRET on the gateway server.");
-  }
-  return { clientId, clientSecret };
-}
-
-function profileSummariesFromStore(store) {
-  const summaries = [];
-  for (const [key, profile] of Object.entries(store.profiles || {})) {
-    summaries.push({
-      key,
-      profile_name: profile.profile_name || "",
-      team_id: profile.team_id || "",
-      team_name: profile.team_name || "",
-      authed_user_id: profile.authed_user_id || "",
-      has_bot_token: Boolean(profile.bot_token),
-      has_user_token: Boolean(profile.user_token),
-      updated_at: profile.updated_at || null,
-      is_default: store.default_profile === key,
-    });
-  }
-  return summaries;
-}
-
-function buildGatewayRedirectUri() {
-  const url = new URL(OAUTH_CALLBACK_PATH, `${GATEWAY_PUBLIC_BASE_URL.replace(/\/+$/, "")}/`);
-  return url.toString();
-}
-
-function parseScopesFromQuery(searchParams, key, fallback) {
-  const value = searchParams.get(key);
-  return parseScopeList(value || fallback);
-}
-
-function buildOauthStartUrlFromInvitePayload(gatewayBaseUrl, payload) {
-  const params = new URLSearchParams();
-  if (payload.profile) params.set("profile", payload.profile);
-  if (payload.team) params.set("team", payload.team);
-  if (payload.scope) params.set("scope", payload.scope);
-  if (payload.user_scope) params.set("user_scope", payload.user_scope);
-  return `${gatewayBaseUrl.replace(/\/+$/, "")}/oauth/start${params.toString() ? `?${params.toString()}` : ""}`;
-}
-
-function buildPublicOnboardPayload(gatewayBaseUrl, params = {}) {
-  const profile = String(params.profile || "").trim() || createAutoOnboardProfileName(GATEWAY_PUBLIC_ONBOARD_PROFILE_PREFIX);
-  const team = String(params.team || process.env.SLACK_OAUTH_TEAM_ID || "").trim();
-  const scope = parseScopeList(params.scope || DEFAULT_OAUTH_BOT_SCOPES).join(",");
-  const userScope = parseScopeList(params.user_scope || DEFAULT_OAUTH_USER_SCOPES).join(",");
-  const payload = {
-    gateway_url: gatewayBaseUrl,
-    gateway_api_key: "",
-    profile,
-    team,
-    scope,
-    user_scope: userScope,
-  };
-  if (GATEWAY_ALLOW_PUBLIC) {
-    payload.gateway_api_key = "";
-  } else if (GATEWAY_PUBLIC_ONBOARD_API_KEY) {
-    payload.gateway_api_key = GATEWAY_PUBLIC_ONBOARD_API_KEY;
-  } else if (GATEWAY_PUBLIC_ONBOARD_EXPOSE_API_KEY) {
-    payload.gateway_api_key = GATEWAY_CLIENT_API_KEY || "";
-  }
-  const oauthStartUrl = buildOauthStartUrlFromInvitePayload(gatewayBaseUrl, payload);
-  return {
-    ok: true,
-    mode: "public_onboard",
-    gateway_url: payload.gateway_url,
-    gateway_api_key: payload.gateway_api_key,
-    profile: payload.profile,
-    oauth_start_url: oauthStartUrl,
-    requires_gateway_api_key: !GATEWAY_ALLOW_PUBLIC,
-  };
-}
-
-function buildOnboardPowerShellScript({ gatewayBaseUrl, token, profile, team, scope, userScope }) {
-  const safeGateway = String(gatewayBaseUrl || "").replace(/'/g, "''");
-  const safeToken = String(token || "").replace(/'/g, "''");
-  const safeProfile = String(profile || "").replace(/'/g, "''");
-  const safeTeam = String(team || "").replace(/'/g, "''");
-  const safeScope = String(scope || "").replace(/'/g, "''");
-  const safeUserScope = String(userScope || "").replace(/'/g, "''");
-  const safePackageSpec = String(ONBOARD_PACKAGE_SPEC || "").replace(/'/g, "''");
-  const onboardCommandParts = [`npx -y '${safePackageSpec}' onboard run --gateway '${safeGateway}'`];
-  if (safeToken) onboardCommandParts.push(`--token '${safeToken}'`);
-  if (safeProfile) onboardCommandParts.push(`--profile '${safeProfile}'`);
-  if (safeTeam) onboardCommandParts.push(`--team '${safeTeam}'`);
-  if (safeScope) onboardCommandParts.push(`--scope '${safeScope}'`);
-  if (safeUserScope) onboardCommandParts.push(`--user-scope '${safeUserScope}'`);
-
+function printOnboardHelp() {
   const lines = [
-    "$ErrorActionPreference = 'Stop'",
-    "if (-not (Get-Command npx -ErrorAction SilentlyContinue)) { throw 'npx is required. Install Node.js first.' }",
+    "Slack Max onboard helper (client-side)",
+    "",
+    "Usage:",
+    "  slack-max-api-mcp onboard run",
+    "  slack-max-api-mcp onboard run --server https://onboard.example.com",
+    "    [--profile NAME] [--team T123] [--scope a,b] [--user-scope c,d]",
+    "  slack-max-api-mcp onboard help",
+    "",
+    "Notes:",
+    `  - Default onboard server: ${ONBOARD_SERVER_URL}`,
+    "  - This command does not require SLACK_CLIENT_SECRET on team PCs.",
+    "  - It opens browser OAuth via central onboarding server and saves tokens locally.",
   ];
-  if (ONBOARD_SKIP_TLS_VERIFY) {
-    lines.push("$env:NODE_TLS_REJECT_UNAUTHORIZED='0'");
-  }
-  lines.push(onboardCommandParts.join(" "));
-  if (ONBOARD_SKIP_TLS_VERIFY) {
-    lines.push("Remove-Item Env:NODE_TLS_REJECT_UNAUTHORIZED -ErrorAction SilentlyContinue");
-  }
-  return lines.join("\r\n");
+  console.log(lines.join("\n"));
 }
 
-function createGatewayInviteTokenFromOptions(options = {}) {
-  const secret = requireGatewayInviteSecret();
-  const profile = String(options.profile || "").trim();
-  const team = String(options.team || "").trim();
-  const scope = parseScopeList(options.scope || DEFAULT_OAUTH_BOT_SCOPES).join(",");
-  const userScope = parseScopeList(options["user-scope"] || options.user_scope || DEFAULT_OAUTH_USER_SCOPES).join(
-    ","
+function printOnboardServerHelp() {
+  const lines = [
+    "Slack Max onboard server (central)",
+    "",
+    "Usage:",
+    "  slack-max-api-mcp onboard-server start",
+    "    [--host 0.0.0.0] [--port 8790] [--public-base-url https://onboard.example.com]",
+    "    [--callback-path /slack/oauth/callback]",
+    "  slack-max-api-mcp onboard-server help",
+    "",
+    "Required env vars (server-side only):",
+    "  SLACK_CLIENT_ID",
+    "  SLACK_CLIENT_SECRET",
+    "",
+    "Optional env vars:",
+    "  SLACK_ONBOARD_SERVER_HOST, SLACK_ONBOARD_SERVER_PORT",
+    "  SLACK_ONBOARD_PUBLIC_BASE_URL, SLACK_ONBOARD_SERVER_CALLBACK_PATH",
+    "  SLACK_ONBOARD_CLAIM_TTL_MS",
+  ];
+  console.log(lines.join("\n"));
+}
+
+async function runOnboardClient(args) {
+  const { options } = parseCliArgs(args);
+  const serverBase = String(options.server || ONBOARD_SERVER_URL).trim().replace(/\/+$/, "");
+  if (!serverBase) {
+    throw new Error("Missing onboard server URL. Use --server or set SLACK_ONBOARD_SERVER_URL.");
+  }
+
+  const requestedProfile = String(options.profile || "").trim();
+  const requestedTeam = String(options.team || "").trim();
+  const requestedScope = parseScopeList(options.scope || "").join(",");
+  const requestedUserScope = parseScopeList(options["user-scope"] || "").join(",");
+
+  const bootstrapParams = new URLSearchParams();
+  if (requestedProfile) bootstrapParams.set("profile", requestedProfile);
+  if (requestedTeam) bootstrapParams.set("team", requestedTeam);
+  if (requestedScope) bootstrapParams.set("scope", requestedScope);
+  if (requestedUserScope) bootstrapParams.set("user_scope", requestedUserScope);
+
+  const bootstrapUrl = `${serverBase}/onboard/bootstrap${bootstrapParams.toString() ? `?${bootstrapParams.toString()}` : ""}`;
+  const bootstrap = await fetchJsonResponse(
+    bootstrapUrl,
+    { method: "GET", headers: { Accept: "application/json" } },
+    "Onboard bootstrap"
   );
-  const ttlDays = Math.max(1, Number(options.days || INVITE_TOKEN_DEFAULT_DAYS));
-  const gatewayUrl = String(options.gateway || options.gateway_url || GATEWAY_PUBLIC_BASE_URL).replace(/\/+$/, "");
 
-  const payload = {
-    v: 1,
-    exp: Date.now() + ttlDays * 24 * 60 * 60 * 1000,
-    gateway_url: gatewayUrl,
-    gateway_api_key: String(options["client-api-key"] || options.client_api_key || GATEWAY_CLIENT_API_KEY || ""),
-    profile,
-    team,
-    scope,
-    user_scope: userScope,
-  };
-  const token = createSignedInviteToken(payload, secret);
-  return { token, payload };
+  const startUrl = String(bootstrap.onboard_start_url || "");
+  const claimToken = String(bootstrap.claim_token || "");
+  if (!startUrl || !claimToken) {
+    throw new Error("Onboard bootstrap response is missing onboard_start_url or claim_token.");
+  }
+
+  const opened = openExternalUrl(startUrl);
+  if (!opened) {
+    console.log(`[onboard] Open this URL in browser:\n${startUrl}`);
+  } else {
+    console.log("[onboard] Browser opened for OAuth approval.");
+  }
+
+  const pollIntervalMs = Math.max(500, Number(options["poll-ms"] || ONBOARD_POLL_INTERVAL_MS));
+  const timeoutMs = Math.max(30_000, Number(options["timeout-ms"] || ONBOARD_TIMEOUT_MS));
+  const deadline = Date.now() + timeoutMs;
+  const claimUrl = `${serverBase}/onboard/claim?claim=${encodeURIComponent(claimToken)}`;
+
+  while (Date.now() < deadline) {
+    await sleep(pollIntervalMs);
+    const claimData = await fetchJsonResponse(
+      claimUrl,
+      { method: "GET", headers: { Accept: "application/json" } },
+      "Onboard claim"
+    );
+
+    if (claimData.status === "pending") {
+      continue;
+    }
+
+    if (claimData.status !== "ready") {
+      throw new Error(`Unexpected onboard claim status: ${claimData.status || "unknown"}`);
+    }
+
+    const oauthResponse = claimData.oauth_response;
+    if (!oauthResponse || typeof oauthResponse !== "object") {
+      throw new Error("Onboard claim result is missing oauth_response.");
+    }
+
+    const { key, profile } = upsertOauthProfile(oauthResponse, claimData.profile || requestedProfile || "");
+    console.log(`[onboard] saved profile: ${profile.profile_name} (${key})`);
+    console.log(`[onboard] token store path: ${TOKEN_STORE_PATH}`);
+    console.log("[onboard] Next step for MCP clients:");
+    console.log(`  setx SLACK_PROFILE \"${profile.profile_name}\"`);
+    return;
+  }
+
+  throw new Error("Timed out waiting for central onboarding completion.");
 }
 
-async function proxySlackHttpRequest(payload) {
-  const tokenCandidate = requireSlackTokenCandidate(payload.token_override, {
-    profileSelector: payload.profile_selector || process.env.SLACK_PROFILE || GATEWAY_PROFILE || undefined,
-    preferredTokenType: payload.preferred_token_type || process.env.SLACK_DEFAULT_TOKEN_TYPE || undefined,
-  });
-
-  const method = payload.http_method || "GET";
-  const endpoint = new URL(payload.url);
-  for (const [k, v] of Object.entries(toRecordObject(payload.query))) {
-    if (v === undefined || v === null) continue;
-    endpoint.searchParams.set(k, String(v));
+async function runOnboardServerStart(args) {
+  const { options } = parseCliArgs(args);
+  const clientId = options["client-id"] || process.env.SLACK_CLIENT_ID;
+  const clientSecret = options["client-secret"] || process.env.SLACK_CLIENT_SECRET;
+  if (!clientId || !clientSecret) {
+    throw new Error("Missing SLACK_CLIENT_ID or SLACK_CLIENT_SECRET on onboarding server.");
   }
 
-  const reqHeaders = {
-    Authorization: `Bearer ${tokenCandidate.token}`,
-    ...toRecordObject(payload.headers),
-  };
+  const host = String(options.host || ONBOARD_SERVER_HOST);
+  const port = Number(options.port || ONBOARD_SERVER_PORT);
+  const callbackPath = String(options["callback-path"] || ONBOARD_CALLBACK_PATH);
+  const publicBaseUrl = String(options["public-base-url"] || ONBOARD_PUBLIC_BASE_URL).replace(/\/+$/, "");
+  const claimTtlMs = Math.max(60_000, Number(options["claim-ttl-ms"] || ONBOARD_CLAIM_TTL_MS));
+  const redirectUri = new URL(callbackPath, `${publicBaseUrl}/`).toString();
 
-  let body;
-  const formBody = toRecordObject(payload.form_body);
-  const jsonBody = toRecordObject(payload.json_body);
-  if (Object.keys(formBody).length > 0) {
-    reqHeaders["Content-Type"] = "application/x-www-form-urlencoded; charset=utf-8";
-    body = toUrlEncodedBody(formBody);
-  } else if (Object.keys(jsonBody).length > 0) {
-    reqHeaders["Content-Type"] = "application/json; charset=utf-8";
-    body = JSON.stringify(jsonBody);
-  }
-
-  const res = await fetch(endpoint.toString(), { method, headers: reqHeaders, body });
-  const text = await res.text();
-  let parsedBody = text;
-  try {
-    parsedBody = JSON.parse(text);
-  } catch {
-    // keep text
-  }
-
-  return {
-    url: endpoint.toString(),
-    status: res.status,
-    ok: res.ok,
-    headers: Object.fromEntries(res.headers.entries()),
-    body: parsedBody,
-    token_source: tokenCandidate.source,
-  };
-}
-
-async function startGatewayServer() {
-  const pendingStates = new Map();
-  const callbackPath = OAUTH_CALLBACK_PATH;
-  const redirectUri = buildGatewayRedirectUri();
-  const gatewayBaseUrl = `${GATEWAY_PUBLIC_BASE_URL.replace(/\/+$/, "")}`;
+  const claimSessions = new Map();
+  const stateToClaim = new Map();
 
   const server = http.createServer(async (req, res) => {
     try {
+      cleanupExpiredClaimSessions(claimSessions, stateToClaim);
       const method = req.method || "GET";
-      const requestUrl = new URL(req.url || "/", `http://${GATEWAY_HOST}:${GATEWAY_PORT}`);
+      const requestUrl = new URL(req.url || "/", `http://${host}:${port}`);
 
       if (method === "GET" && requestUrl.pathname === "/health") {
         sendJson(res, 200, {
           ok: true,
           service: SERVER_NAME,
-          mode: "gateway",
-          token_store_path: TOKEN_STORE_PATH,
-          client_config_path: CLIENT_CONFIG_PATH,
-          callback_url: redirectUri,
+          mode: "onboard_server",
+          public_base_url: publicBaseUrl,
+          callback_path: callbackPath,
         });
-        return;
-      }
-
-      if (method === "GET" && requestUrl.pathname === "/onboard.ps1") {
-        const token = requestUrl.searchParams.get("token") || "";
-        let script = "";
-        if (token) {
-          const secret = requireGatewayInviteSecret();
-          const payload = parseAndVerifyInviteToken(token, secret);
-          script = buildOnboardPowerShellScript({
-            gatewayBaseUrl: payload.gateway_url || gatewayBaseUrl,
-            token,
-          });
-        } else {
-          if (!GATEWAY_PUBLIC_ONBOARD_ENABLED) {
-            sendJson(res, 404, { ok: false, error: "public_onboard_disabled" });
-            return;
-          }
-          const profile =
-            requestUrl.searchParams.get("profile") ||
-            createAutoOnboardProfileName(GATEWAY_PUBLIC_ONBOARD_PROFILE_PREFIX);
-          const team = requestUrl.searchParams.get("team") || "";
-          const scope = requestUrl.searchParams.get("scope") || "";
-          const userScope = requestUrl.searchParams.get("user_scope") || "";
-          script = buildOnboardPowerShellScript({
-            gatewayBaseUrl,
-            profile,
-            team,
-            scope,
-            userScope,
-          });
-        }
-        res.writeHead(200, {
-          "Content-Type": "text/plain; charset=utf-8",
-          "Cache-Control": "no-store",
-        });
-        res.end(script);
         return;
       }
 
       if (method === "GET" && requestUrl.pathname === "/onboard/bootstrap") {
-        if (!GATEWAY_PUBLIC_ONBOARD_ENABLED) {
-          sendJson(res, 404, { ok: false, error: "public_onboard_disabled" });
-          return;
-        }
-        const payload = buildPublicOnboardPayload(gatewayBaseUrl, {
-          profile: requestUrl.searchParams.get("profile") || "",
-          team: requestUrl.searchParams.get("team") || "",
-          scope: requestUrl.searchParams.get("scope") || "",
-          user_scope: requestUrl.searchParams.get("user_scope") || "",
-        });
-        sendJson(res, 200, payload);
-        return;
-      }
-
-      if (method === "GET" && requestUrl.pathname === "/onboard/resolve") {
-        const token = requestUrl.searchParams.get("token") || "";
-        const secret = requireGatewayInviteSecret();
-        const payload = parseAndVerifyInviteToken(token, secret);
-        const oauthStartUrl = buildOauthStartUrlFromInvitePayload(gatewayBaseUrl, payload);
-        sendJson(res, 200, {
-          ok: true,
-          mode: "invite_token",
-          gateway_url: payload.gateway_url || gatewayBaseUrl,
-          gateway_api_key: payload.gateway_api_key || "",
-          profile: payload.profile || "",
-          oauth_start_url: oauthStartUrl,
-          expires_at: new Date(Number(payload.exp)).toISOString(),
-        });
-        return;
-      }
-
-      if (method === "GET" && requestUrl.pathname === "/oauth/start") {
-        const { clientId } = requireGatewayClientCredentials();
-        const profileName = requestUrl.searchParams.get("profile") || "";
-        const teamId = requestUrl.searchParams.get("team") || process.env.SLACK_OAUTH_TEAM_ID || "";
-        const botScopes = parseScopesFromQuery(requestUrl.searchParams, "scope", DEFAULT_OAUTH_BOT_SCOPES);
-        const userScopes = parseScopesFromQuery(
-          requestUrl.searchParams,
-          "user_scope",
-          DEFAULT_OAUTH_USER_SCOPES
+        const profile = String(requestUrl.searchParams.get("profile") || "").trim();
+        const team = String(requestUrl.searchParams.get("team") || "").trim();
+        const botScopes = parseScopeList(requestUrl.searchParams.get("scope") || DEFAULT_OAUTH_BOT_SCOPES);
+        const userScopes = parseScopeList(
+          requestUrl.searchParams.get("user_scope") || DEFAULT_OAUTH_USER_SCOPES
         );
 
         if (botScopes.length === 0 && userScopes.length === 0) {
@@ -1517,22 +947,52 @@ async function startGatewayServer() {
           return;
         }
 
-        const state = crypto.randomBytes(24).toString("hex");
-        pendingStates.set(state, {
-          created_at: Date.now(),
-          profile_name: profileName,
-          team_id: teamId,
+        const claimToken = crypto.randomBytes(32).toString("hex");
+        const expiresAt = Date.now() + claimTtlMs;
+        claimSessions.set(claimToken, {
+          claim_token: claimToken,
+          profile,
+          team,
           bot_scopes: botScopes,
           user_scopes: userScopes,
+          oauth_response: null,
+          state: "",
+          expires_at: expiresAt,
         });
+
+        const startParams = new URLSearchParams();
+        startParams.set("claim", claimToken);
+        const startUrl = `${publicBaseUrl}/onboard/start?${startParams.toString()}`;
+
+        sendJson(res, 200, {
+          ok: true,
+          onboard_start_url: startUrl,
+          claim_token: claimToken,
+          profile,
+          expires_at: new Date(expiresAt).toISOString(),
+        });
+        return;
+      }
+
+      if (method === "GET" && requestUrl.pathname === "/onboard/start") {
+        const claimToken = String(requestUrl.searchParams.get("claim") || "");
+        const session = claimSessions.get(claimToken);
+        if (!session || isClaimSessionExpired(session)) {
+          sendText(res, 400, "Invalid or expired onboarding claim.");
+          return;
+        }
+
+        const state = crypto.randomBytes(24).toString("hex");
+        session.state = state;
+        stateToClaim.set(state, claimToken);
 
         const authorizeUrl = buildOauthAuthorizeUrl({
           clientId,
           state,
           redirectUri,
-          botScopes,
-          userScopes,
-          teamId,
+          botScopes: session.bot_scopes,
+          userScopes: session.user_scopes,
+          teamId: session.team,
         });
 
         res.writeHead(302, { Location: authorizeUrl });
@@ -1541,7 +1001,6 @@ async function startGatewayServer() {
       }
 
       if (method === "GET" && requestUrl.pathname === callbackPath) {
-        const { clientId, clientSecret } = requireGatewayClientCredentials();
         const receivedError = requestUrl.searchParams.get("error");
         if (receivedError) {
           sendText(res, 400, `Slack OAuth failed: ${receivedError}`);
@@ -1555,106 +1014,45 @@ async function startGatewayServer() {
           return;
         }
 
-        const pending = pendingStates.get(state);
-        pendingStates.delete(state);
-        if (!pending) {
-          sendText(res, 400, "Invalid or expired OAuth state.");
+        const claimToken = stateToClaim.get(state);
+        if (!claimToken) {
+          sendText(res, 400, "Invalid OAuth state.");
           return;
         }
-        if (Date.now() - pending.created_at > GATEWAY_STATE_TTL_MS) {
-          sendText(res, 400, "Expired OAuth state.");
+
+        const session = claimSessions.get(claimToken);
+        if (!session || isClaimSessionExpired(session)) {
+          sendText(res, 400, "Expired onboarding claim.");
           return;
         }
 
         const oauthResponse = await exchangeOauthCode({ clientId, clientSecret, code, redirectUri });
-        const { key, profile } = upsertOauthProfile(oauthResponse, pending.profile_name);
-        sendText(
-          res,
-          200,
-          [
-            "Slack OAuth authorization completed.",
-            `Saved profile: ${profile.profile_name || key}`,
-            `Profile key: ${key}`,
-            "You can close this tab.",
-          ].join("\n")
-        );
+        session.oauth_response = oauthResponse;
+        stateToClaim.delete(state);
+        sendText(res, 200, "Slack OAuth completed. Return to your CLI and wait for onboarding to finish.");
         return;
       }
 
-      if (method === "GET" && requestUrl.pathname === "/oauth/link") {
-        const params = new URLSearchParams();
-        const profile = requestUrl.searchParams.get("profile") || "";
-        const team = requestUrl.searchParams.get("team") || "";
-        const scope = requestUrl.searchParams.get("scope") || "";
-        const userScope = requestUrl.searchParams.get("user_scope") || "";
-        if (profile) params.set("profile", profile);
-        if (team) params.set("team", team);
-        if (scope) params.set("scope", scope);
-        if (userScope) params.set("user_scope", userScope);
+      if (method === "GET" && requestUrl.pathname === "/onboard/claim") {
+        const claimToken = String(requestUrl.searchParams.get("claim") || "");
+        const session = claimSessions.get(claimToken);
+        if (!session || isClaimSessionExpired(session)) {
+          sendJson(res, 400, { ok: false, error: "invalid_or_expired_claim" });
+          return;
+        }
+
+        if (!session.oauth_response) {
+          sendJson(res, 200, { ok: true, status: "pending" });
+          return;
+        }
+
         sendJson(res, 200, {
           ok: true,
-          url: `${gatewayBaseUrl}/oauth/start${params.toString() ? `?${params.toString()}` : ""}`,
+          status: "ready",
+          profile: session.profile || "",
+          oauth_response: session.oauth_response,
         });
-        return;
-      }
-
-      if (method === "GET" && requestUrl.pathname === "/profiles") {
-        if (!isGatewayAuthorized(req)) {
-          sendJson(res, 401, { ok: false, error: "unauthorized" });
-          return;
-        }
-        const tokenStore = loadTokenStore();
-        sendJson(res, 200, {
-          ok: true,
-          default_profile: tokenStore.default_profile,
-          profiles: profileSummariesFromStore(tokenStore),
-        });
-        return;
-      }
-
-      if (method === "POST" && requestUrl.pathname === "/api/slack/call") {
-        if (!isGatewayAuthorized(req)) {
-          sendJson(res, 401, { ok: false, error: "unauthorized" });
-          return;
-        }
-
-        const payload = await readRequestJson(req, 1024 * 1024);
-        const methodName = payload.method;
-        if (!methodName || typeof methodName !== "string") {
-          sendJson(res, 400, { ok: false, error: "missing_method" });
-          return;
-        }
-
-        const candidates = getSlackTokenCandidates(payload.token_override, {
-          profileSelector:
-            payload.profile_selector || process.env.SLACK_PROFILE || GATEWAY_PROFILE || undefined,
-          preferredTokenType:
-            payload.preferred_token_type || process.env.SLACK_DEFAULT_TOKEN_TYPE || undefined,
-        });
-        if (candidates.length === 0) {
-          sendJson(res, 400, { ok: false, error: "missing_token" });
-          return;
-        }
-
-        const data = await callSlackApiWithCandidates(methodName, payload.params || {}, candidates);
-        sendJson(res, 200, { ok: true, data });
-        return;
-      }
-
-      if (method === "POST" && requestUrl.pathname === "/api/slack/http") {
-        if (!isGatewayAuthorized(req)) {
-          sendJson(res, 401, { ok: false, error: "unauthorized" });
-          return;
-        }
-
-        const payload = await readRequestJson(req, 1024 * 1024);
-        if (!payload.url || typeof payload.url !== "string") {
-          sendJson(res, 400, { ok: false, error: "missing_url" });
-          return;
-        }
-
-        const data = await proxySlackHttpRequest(payload);
-        sendJson(res, 200, { ok: true, data });
+        claimSessions.delete(claimToken);
         return;
       }
 
@@ -1663,102 +1061,50 @@ async function startGatewayServer() {
       sendJson(res, 500, {
         ok: false,
         error: error instanceof Error ? error.message : String(error),
-        slack_error: error?.slack_error || null,
-        needed: error?.needed || null,
-        provided: error?.provided || null,
-        token_source: error?.token_source || null,
       });
-    } finally {
-      for (const [state, value] of pendingStates.entries()) {
-        if (Date.now() - value.created_at > GATEWAY_STATE_TTL_MS) {
-          pendingStates.delete(state);
-        }
-      }
     }
   });
 
   await new Promise((resolve, reject) => {
     server.once("error", reject);
-    server.listen(GATEWAY_PORT, GATEWAY_HOST, resolve);
+    server.listen(port, host, resolve);
   });
 
-  console.error(
-    `[${SERVER_NAME}] gateway listening at http://${GATEWAY_HOST}:${GATEWAY_PORT} | public_base=${gatewayBaseUrl}`
-  );
-  console.error(`[${SERVER_NAME}] oauth start URL: ${gatewayBaseUrl}/oauth/start`);
-  console.error(`[${SERVER_NAME}] profile list URL: ${gatewayBaseUrl}/profiles`);
-  if (GATEWAY_PUBLIC_ONBOARD_ENABLED) {
-    console.error(`[${SERVER_NAME}] public onboard URL: ${gatewayBaseUrl}/onboard/bootstrap`);
-  }
+  console.error(`[${SERVER_NAME}] onboard server listening at http://${host}:${port}`);
+  console.error(`[${SERVER_NAME}] public base: ${publicBaseUrl}`);
+  console.error(`[${SERVER_NAME}] bootstrap URL: ${publicBaseUrl}/onboard/bootstrap`);
 }
 
-function printGatewayHelp() {
-  const lines = [
-    "Slack Max Gateway helper",
-    "",
-    "Usage:",
-    "  slack-max-api-mcp gateway start",
-    "  slack-max-api-mcp gateway invite --profile woobin --team T123",
-    "  # tokenless onboarding endpoint (when enabled):",
-    "  #   https://gateway.example.com/onboard/bootstrap",
-    "  slack-max-api-mcp gateway help",
-    "",
-    "Gateway env vars (server-side):",
-    "  SLACK_CLIENT_ID, SLACK_CLIENT_SECRET",
-    "  SLACK_GATEWAY_HOST, SLACK_GATEWAY_PORT, SLACK_GATEWAY_PUBLIC_BASE_URL",
-    "  SLACK_GATEWAY_SHARED_SECRET (recommended)",
-    "  SLACK_GATEWAY_CLIENT_API_KEY (optional, defaults to shared secret)",
-    "  SLACK_GATEWAY_PUBLIC_ONBOARD=true  # allow tokenless onboarding endpoint",
-    "  SLACK_GATEWAY_PUBLIC_ONBOARD_API_KEY=<client key>  # optional, used when gateway is not fully public",
-    "  SLACK_GATEWAY_PUBLIC_ONBOARD_EXPOSE_API_KEY=true   # fallback: expose client key as-is",
-    "  SLACK_OAUTH_BOT_SCOPES, SLACK_OAUTH_USER_SCOPES",
-    "",
-    "Client env vars (mcp caller-side):",
-    "  SLACK_GATEWAY_URL, SLACK_GATEWAY_API_KEY",
-    "  SLACK_PROFILE or SLACK_GATEWAY_PROFILE",
-  ];
-  console.log(lines.join("\n"));
-}
-
-function runGatewayInvite(args) {
-  const { options } = parseCliArgs(args);
-  const { token, payload } = createGatewayInviteTokenFromOptions(options);
-  const gatewayBaseUrl = String(payload.gateway_url || GATEWAY_PUBLIC_BASE_URL).replace(/\/+$/, "");
-  const onboardScriptUrl = `${gatewayBaseUrl}/onboard.ps1?token=${encodeURIComponent(token)}`;
-  const oauthStartUrl = buildOauthStartUrlFromInvitePayload(gatewayBaseUrl, payload);
-  const command = `powershell -ExecutionPolicy Bypass -Command "irm '${onboardScriptUrl}' | iex"`;
-  const commandCurlFallback = [
-    `$tmp = Join-Path $env:TEMP 'slack-onboard.ps1'`,
-    `curl.exe -k -sS '${onboardScriptUrl}' -o $tmp`,
-    `powershell -ExecutionPolicy Bypass -File $tmp`,
-    `Remove-Item $tmp -Force`,
-  ].join("; ");
-
-  console.log("[gateway] invite token created");
-  console.log(`[gateway] expires_at: ${new Date(Number(payload.exp)).toISOString()}`);
-  console.log(`[gateway] onboarding_script: ${onboardScriptUrl}`);
-  console.log(`[gateway] oauth_start_url: ${oauthStartUrl}`);
-  console.log("[gateway] one-click command for team member:");
-  console.log(command);
-  console.log("[gateway] fallback command (self-signed TLS):");
-  console.log(commandCurlFallback);
-}
-
-async function runGatewayCli(args) {
+async function runOnboardCli(args) {
   const subcommand = (args[0] || "help").toLowerCase();
+  const rest = args.slice(1);
+
   if (subcommand === "help" || subcommand === "--help" || subcommand === "-h") {
-    printGatewayHelp();
+    printOnboardHelp();
+    return;
+  }
+  if (subcommand === "run") {
+    await runOnboardClient(rest);
+    return;
+  }
+
+  throw new Error(`Unknown onboard command: ${subcommand}`);
+}
+
+async function runOnboardServerCli(args) {
+  const subcommand = (args[0] || "help").toLowerCase();
+  const rest = args.slice(1);
+
+  if (subcommand === "help" || subcommand === "--help" || subcommand === "-h") {
+    printOnboardServerHelp();
     return;
   }
   if (subcommand === "start") {
-    await startGatewayServer();
+    await runOnboardServerStart(rest);
     return;
   }
-  if (subcommand === "invite") {
-    runGatewayInvite(args.slice(1));
-    return;
-  }
-  throw new Error(`Unknown gateway command: ${subcommand}`);
+
+  throw new Error(`Unknown onboard-server command: ${subcommand}`);
 }
 
 function loadCatalog() {
@@ -1787,6 +1133,286 @@ function toolNameFromMethod(method, usedNames) {
   const name = `${base}_${idx}`;
   usedNames.add(name);
   return name;
+}
+
+function normalizeSearchTokens(value) {
+  return String(value || "")
+    .toLowerCase()
+    .split(/[^a-z0-9_.-]+/)
+    .map((part) => part.trim())
+    .filter(Boolean);
+}
+
+function compactCatalogMethodInfo(methodInfo, options = {}) {
+  const includeScopes = options.includeScopes !== false;
+  const includeUrl = options.includeUrl === true;
+  const out = {
+    method: methodInfo?.method || "",
+    family: methodInfo?.family || "",
+    description: methodInfo?.description || "",
+  };
+  if (includeScopes) {
+    out.scopes = Array.isArray(methodInfo?.scopes) ? methodInfo.scopes : [];
+  }
+  if (includeUrl) {
+    out.url = methodInfo?.url || "";
+  }
+  return out;
+}
+
+function scoreCatalogMethod(methodInfo, tokens) {
+  if (!Array.isArray(tokens) || tokens.length === 0) return 0;
+  const method = String(methodInfo?.method || "").toLowerCase();
+  const description = String(methodInfo?.description || "").toLowerCase();
+  const family = String(methodInfo?.family || "").toLowerCase();
+  const scopes = Array.isArray(methodInfo?.scopes) ? methodInfo.scopes.join(" ").toLowerCase() : "";
+
+  let score = 0;
+  for (const token of tokens) {
+    if (!token) continue;
+    if (method.includes(token)) score += 8;
+    if (description.includes(token)) score += 4;
+    if (family.includes(token)) score += 3;
+    if (scopes.includes(token)) score += 2;
+  }
+  return score;
+}
+
+function findCatalogMethods(catalog, query, maxItems = 10) {
+  const methods = Array.isArray(catalog?.methods) ? catalog.methods : [];
+  const size = Math.max(1, Math.min(50, Number(maxItems) || 10));
+  const tokens = normalizeSearchTokens(query);
+
+  if (tokens.length === 0) {
+    return methods.slice(0, size);
+  }
+
+  return methods
+    .map((methodInfo) => ({
+      methodInfo,
+      score: scoreCatalogMethod(methodInfo, tokens),
+    }))
+    .filter((item) => item.score > 0)
+    .sort((a, b) => {
+      if (b.score !== a.score) return b.score - a.score;
+      return String(a.methodInfo?.method || "").localeCompare(String(b.methodInfo?.method || ""));
+    })
+    .slice(0, size)
+    .map((item) => item.methodInfo);
+}
+
+function findCatalogMethodByExactName(catalog, methodName) {
+  const target = String(methodName || "").trim();
+  if (!target) return null;
+  const methods = Array.isArray(catalog?.methods) ? catalog.methods : [];
+  return methods.find((methodInfo) => methodInfo?.method === target) || null;
+}
+
+async function executeSlackHttpRequest({
+  url,
+  http_method,
+  query,
+  json_body,
+  form_body,
+  headers,
+  token_override,
+}) {
+  const tokenCandidate = requireSlackTokenCandidate(token_override);
+  const method = http_method || "GET";
+
+  const endpoint = new URL(url);
+  for (const [k, v] of Object.entries(toRecordObject(query))) {
+    if (v === undefined || v === null) continue;
+    endpoint.searchParams.set(k, String(v));
+  }
+
+  const reqHeaders = {
+    Authorization: 
+      "Bearer " + tokenCandidate.token,
+    ...(headers || {}),
+  };
+
+  let body;
+  if (form_body && Object.keys(form_body).length > 0) {
+    reqHeaders["Content-Type"] = "application/x-www-form-urlencoded; charset=utf-8";
+    body = toUrlEncodedBody(form_body);
+  } else if (json_body && Object.keys(json_body).length > 0) {
+    reqHeaders["Content-Type"] = "application/json; charset=utf-8";
+    body = JSON.stringify(json_body);
+  }
+
+  const res = await fetch(endpoint.toString(), {
+    method,
+    headers: reqHeaders,
+    body,
+  });
+
+  const text = await res.text();
+  let parsedBody = text;
+  try {
+    parsedBody = JSON.parse(text);
+  } catch {
+    // Keep plain text when response is not JSON.
+  }
+
+  return {
+    url: endpoint.toString(),
+    status: res.status,
+    ok: res.ok,
+    headers: Object.fromEntries(res.headers.entries()),
+    body: parsedBody,
+  };
+}
+
+function registerSmartGatewayTools(server, catalog) {
+  server.registerTool(
+    "gateway_plan",
+    {
+      description:
+        "Plan a Slack task with minimal context. Returns ranked candidate methods and the next actions.",
+      inputSchema: {
+        goal: z.string().min(3),
+        max_methods: z.number().int().min(1).max(20).optional(),
+      },
+    },
+    async ({ goal, max_methods }) =>
+      safeToolRun(async () => {
+        const candidates = findCatalogMethods(catalog, goal, max_methods ?? 8).map((methodInfo) =>
+          compactCatalogMethodInfo(methodInfo)
+        );
+        return {
+          mode: TOOL_EXPOSURE_MODE,
+          goal,
+          candidate_methods: candidates,
+          next_steps: [
+            "1) Use gateway_load to inspect candidate methods in detail.",
+            "2) Execute the chosen method with gateway_run(action=method).",
+            "3) Summarize output and repeat only when additional actions are needed.",
+          ],
+          note:
+            "This planner keeps tool exposure small by routing through a minimal tool surface.",
+        };
+      })
+  );
+
+  server.registerTool(
+    "gateway_load",
+    {
+      description:
+        "Load only the method references you need. Supports exact method lookup or query search.",
+      inputSchema: {
+        method: z.string().optional(),
+        query: z.string().optional(),
+        max_items: z.number().int().min(1).max(30).optional(),
+        include_scopes: z.boolean().optional(),
+        include_url: z.boolean().optional(),
+      },
+    },
+    async ({ method, query, max_items, include_scopes, include_url }) =>
+      safeToolRun(async () => {
+        if (!method && !query) {
+          throw new Error("Either `method` or `query` is required.");
+        }
+
+        const includeScopes = include_scopes !== false;
+        const includeUrl = include_url === true;
+        let methods = [];
+
+        if (method) {
+          const exact = findCatalogMethodByExactName(catalog, method);
+          methods = exact ? [exact] : [];
+        } else {
+          methods = findCatalogMethods(catalog, query, max_items ?? 10);
+        }
+
+        return {
+          mode: TOOL_EXPOSURE_MODE,
+          count: methods.length,
+          methods: methods.map((methodInfo) =>
+            compactCatalogMethodInfo(methodInfo, { includeScopes, includeUrl })
+          ),
+        };
+      })
+  );
+
+  server.registerTool(
+    "gateway_run",
+    {
+      description:
+        "Run a Slack action through a single gateway tool. Supports Slack Web API method call and generic HTTP call.",
+      inputSchema: {
+        action: z.enum(["method", "http"]),
+        method: z.string().optional(),
+        params: z.record(z.string(), z.any()).optional(),
+        preferred_token_type: z.enum(["bot", "user", "generic", "auto"]).optional(),
+        url: z.string().url().optional(),
+        http_method: z.enum(["GET", "POST", "PUT", "PATCH", "DELETE"]).optional(),
+        query: z.record(z.string(), z.any()).optional(),
+        json_body: z.record(z.string(), z.any()).optional(),
+        form_body: z.record(z.string(), z.any()).optional(),
+        headers: z.record(z.string(), z.string()).optional(),
+        token_override: z.string().optional(),
+      },
+    },
+    async ({
+      action,
+      method,
+      params,
+      preferred_token_type,
+      url,
+      http_method,
+      query,
+      json_body,
+      form_body,
+      headers,
+      token_override,
+    }) =>
+      safeToolRun(async () => {
+        if (action === "method") {
+          if (!method) throw new Error("`method` is required when action=method.");
+          const data = await callSlackApi(
+            method,
+            params || {},
+            token_override,
+            preferred_token_type ? { preferredTokenType: preferred_token_type } : {}
+          );
+          return { action, method, data };
+        }
+
+        if (!url) throw new Error("`url` is required when action=http.");
+        const data = await executeSlackHttpRequest({
+          url,
+          http_method,
+          query,
+          json_body,
+          form_body,
+          headers,
+          token_override,
+        });
+        return { action, data };
+      })
+  );
+
+  server.registerTool(
+    "gateway_info",
+    {
+      description: "Return gateway exposure mode and lightweight tool registration summary.",
+      inputSchema: {},
+    },
+    async () =>
+      safeToolRun(async () => {
+        return {
+          mode: TOOL_EXPOSURE_MODE,
+          execution_mode: "local",
+          method_tools_enabled: ENABLE_METHOD_TOOLS,
+          max_method_tools: MAX_METHOD_TOOLS,
+          methods_in_catalog: Array.isArray(catalog?.methods) ? catalog.methods.length : 0,
+          exposed_tools_hint: "smart mode keeps the tool surface compact via gateway_plan/load/run/info.",
+        };
+      })
+  );
+
+  return { registered: 4 };
 }
 
 function registerCoreTools(server) {
@@ -1827,63 +1453,15 @@ function registerCoreTools(server) {
     },
     async ({ url, http_method, query, json_body, form_body, headers, token_override }) =>
       safeToolRun(async () => {
-        const runtimeGateway = getRuntimeGatewayConfig();
-        if (runtimeGateway.url) {
-          return slackHttpViaGateway({
-            url,
-            http_method,
-            query,
-            json_body,
-            form_body,
-            headers,
-            token_override,
-          });
-        }
-
-        const tokenCandidate = requireSlackTokenCandidate(token_override);
-        const method = http_method || "GET";
-
-        const endpoint = new URL(url);
-        for (const [k, v] of Object.entries(toRecordObject(query))) {
-          if (v === undefined || v === null) continue;
-          endpoint.searchParams.set(k, String(v));
-        }
-
-        const reqHeaders = {
-          Authorization: `Bearer ${tokenCandidate.token}`,
-          ...(headers || {}),
-        };
-
-        let body;
-        if (form_body && Object.keys(form_body).length > 0) {
-          reqHeaders["Content-Type"] = "application/x-www-form-urlencoded; charset=utf-8";
-          body = toUrlEncodedBody(form_body);
-        } else if (json_body && Object.keys(json_body).length > 0) {
-          reqHeaders["Content-Type"] = "application/json; charset=utf-8";
-          body = JSON.stringify(json_body);
-        }
-
-        const res = await fetch(endpoint.toString(), {
-          method,
-          headers: reqHeaders,
-          body,
+        return executeSlackHttpRequest({
+          url,
+          http_method,
+          query,
+          json_body,
+          form_body,
+          headers,
+          token_override,
         });
-
-        const text = await res.text();
-        let parsedBody = text;
-        try {
-          parsedBody = JSON.parse(text);
-        } catch {
-          // Keep plain text when response is not JSON.
-        }
-
-        return {
-          url: endpoint.toString(),
-          status: res.status,
-          ok: res.ok,
-          headers: Object.fromEntries(res.headers.entries()),
-          body: parsedBody,
-        };
       })
   );
 
@@ -2256,6 +1834,8 @@ function registerCoreTools(server) {
         return { user: info.user || null, profile };
       })
   );
+
+  return { registered: 12 };
 }
 
 function registerCatalogMethodTools(server, catalog) {
@@ -2308,17 +1888,15 @@ function registerCatalogMethodTools(server, catalog) {
       safeToolRun(async () => {
         const tokenStore = loadTokenStore();
         const activeProfile = resolveTokenStoreProfileBySelector(tokenStore, process.env.SLACK_PROFILE);
-        const clientConfig = loadClientConfig();
-        const runtimeGateway = getRuntimeGatewayConfig();
         return {
           catalog_path: CATALOG_PATH,
+          execution_mode: "local",
           method_tools_enabled: ENABLE_METHOD_TOOLS,
           max_method_tools: MAX_METHOD_TOOLS,
           methods_in_catalog: methods.length,
           method_tools_registered: registered,
           method_tool_prefix: METHOD_TOOL_PREFIX,
           token_store_path: TOKEN_STORE_PATH,
-          client_config_path: CLIENT_CONFIG_PATH,
           active_profile: activeProfile
             ? {
                 key: activeProfile.key,
@@ -2326,14 +1904,11 @@ function registerCatalogMethodTools(server, catalog) {
                 team_id: activeProfile.profile?.team_id || "",
               }
             : null,
-          client_profile: clientConfig.profile || "",
           env_tokens_present: {
             bot: Boolean(process.env.SLACK_BOT_TOKEN),
             user: Boolean(process.env.SLACK_USER_TOKEN),
             generic: Boolean(process.env.SLACK_TOKEN),
           },
-          gateway_mode: Boolean(runtimeGateway.url),
-          gateway_url: runtimeGateway.url || null,
           env_example_fallback_enabled: ALLOW_ENV_EXAMPLE_FALLBACK,
         };
       })
@@ -2348,8 +1923,20 @@ async function startMcpServer() {
     { capabilities: { logging: {} } }
   );
 
-  registerCoreTools(server);
   const catalog = loadCatalog();
+  let coreStats = { registered: 0 };
+  let smartStats = { registered: 0 };
+  let compatCoreStats = { registered: 0 };
+
+  if (TOOL_EXPOSURE_MODE === "legacy") {
+    coreStats = registerCoreTools(server);
+  } else {
+    smartStats = registerSmartGatewayTools(server, catalog);
+    if (SMART_COMPAT_CORE_TOOLS) {
+      compatCoreStats = registerCoreTools(server);
+    }
+    coreStats = { registered: smartStats.registered + compatCoreStats.registered };
+  }
   const methodStats = registerCatalogMethodTools(server, catalog);
 
   const transport = new StdioServerTransport();
@@ -2363,7 +1950,7 @@ async function startMcpServer() {
       : 0;
 
   console.error(
-    `[${SERVER_NAME}] connected via stdio | catalog_methods=${catalogCount} | method_tools_registered=${methodStats.registered}`
+    `[${SERVER_NAME}] connected via stdio | mode=${TOOL_EXPOSURE_MODE} | core_tools_registered=${coreStats?.registered ?? 0} | smart_tools_registered=${smartStats.registered} | compat_core_tools_registered=${compatCoreStats.registered} | catalog_methods=${catalogCount} | method_tools_registered=${methodStats.registered}`
   );
 }
 
@@ -2374,17 +1961,26 @@ async function runEntryPoint() {
     await runOauthCli(rest);
     return;
   }
-  if (command === "gateway") {
-    await runGatewayCli(rest);
-    return;
-  }
   if (command === "onboard") {
     await runOnboardCli(rest);
     return;
   }
-  if (!command) {
-    const onboarded = await runAutoOnboardingIfPossible();
-    if (onboarded) return;
+  if (command === "onboard-server") {
+    await runOnboardServerCli(rest);
+    return;
+  }
+  if (command === "help" || command === "--help" || command === "-h") {
+    console.log("Usage:");
+    console.log("  slack-max-api-mcp");
+    console.log("  slack-max-api-mcp oauth <login|list|use|current|help>");
+    console.log("  slack-max-api-mcp onboard <run|help>");
+    console.log("  slack-max-api-mcp onboard-server <start|help>");
+    return;
+  }
+  if (command) {
+    throw new Error(
+      `Unknown command: ${command}. Use 'slack-max-api-mcp help' for available commands.`
+    );
   }
   await startMcpServer();
 }

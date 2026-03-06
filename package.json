@@ -1,6 +1,6 @@
 {
   "name": "slack-max-api-mcp",
-  "version": "1.0.8",
+  "version": "1.0.9",
   "description": "Slack MCP server (stdio) for Codex and Claude Code",
   "main": "src/slack-mcp-server.js",
   "bin": {
@@ -15,9 +15,8 @@
   "scripts": {
     "build:catalog": "node scripts/generate-slack-catalog.js",
     "start": "node src/slack-mcp-server.js",
-    "gateway:start": "node src/slack-mcp-server.js gateway start",
-    "gateway:invite": "node src/slack-mcp-server.js gateway invite --profile demo --team T1234567890",
     "onboard:help": "node src/slack-mcp-server.js onboard help",
+    "onboard-server:start": "node src/slack-mcp-server.js onboard-server start",
     "oauth:help": "node src/slack-mcp-server.js oauth help",
     "check": "node --check src/slack-mcp-server.js"
   },
