@@ -1,6 +1,6 @@
 # Slack Max API MCP
 
-Slack Web API MCP server for Codex/Claude Code over `stdio`.
+Operations-first Slack MCP server for Codex/Claude Code over `stdio`.
 
 - Package: `slack-max-api-mcp`
 - Runtime: pure CLI MCP over stdio
@@ -9,15 +9,85 @@ Slack Web API MCP server for Codex/Claude Code over `stdio`.
 
 ## Tool exposure
 
-- `smart` (default): 16 tools (`gateway_*` router names + core tools)
+- `operations` (default): 14 operations-first tools only
+- `developer`: operations tools + `gateway_*` + core Slack API tools
 - `legacy`: fixed core tools + optional catalog method tools
 
 Environment:
 
-- `SLACK_TOOL_EXPOSURE_MODE=smart|legacy`
+- `SLACK_TOOL_EXPOSURE_MODE=operations|developer|legacy`
 - `SLACK_SMART_COMPAT_CORE_TOOLS=true|false`
 - `SLACK_ENABLE_METHOD_TOOLS=true|false`
 - `SLACK_MAX_METHOD_TOOLS=<number>`
+
+`smart` is still accepted as an alias for `developer`.
+
+## Operations-first tools
+
+The default surface is now operations-first and keeps raw API wrappers out of the main tool list:
+
+- `ops_policy_info`: runtime policy/audit guardrails
+- `ops_playbook_list`: built-in operations playbooks
+- `ops_state_overview`: inspect local operations state (`incidents`, `digests`, `broadcasts`, `followups`)
+- `ops_incident_create`: create + optionally announce a tracked incident
+- `ops_incident_update`: persist a status change and optionally post a thread update
+- `ops_incident_close`: close a tracked incident with stored resolution
+- `ops_broadcast_prepare`: prepare and store a broadcast draft before sending
+- `ops_playbook_run`: run standardized workflows (`incident_open`, `support_digest`, `release_broadcast`)
+- `ops_channel_snapshot`: activity/participant/thread snapshot for a channel
+- `ops_unanswered_threads`: find stale or unanswered question-like threads
+- `ops_sla_breach_scan`: detect SLA breach threads across multiple channels
+- `ops_sla_followup`: auto follow-up replies for SLA breaches with duplicate-suppression state
+- `ops_broadcast_message`: send a prepared draft or direct operational announcement
+- `ops_audit_log_read`: inspect local JSONL audit logs
+
+These tools let teams run repeatable Slack operations without rebuilding multi-step API call chains, and they persist local operational state to make incidents/broadcasts/followups first-class records.
+
+## Config and state
+
+- Operations config file: `config/operations.json`
+- Override path: `SLACK_OPERATIONS_CONFIG_PATH=<path>`
+- Local state path: `~/.slack-max-api-mcp/operations-state.json`
+- Override path: `SLACK_OPERATIONS_STATE_PATH=<path>`
+
+The operations config controls incident templates, digest defaults, broadcast templates, and follow-up suppression windows.
+
+### Playbook examples
+
+```text
+Codex, run ops_playbook_run with playbook=incident_open on #incident-war-room.
+title is "DB Latency Spike", severity is "sev2", owner is "@oncall-db", dry_run=true.
+```
+
+```text
+Codex, run ops_playbook_run with playbook=support_digest for channels #support-kor and #support-global.
+lookback_hours=24, sla_minutes=60, report_channel=#support-ops, dry_run=true.
+```
+
+```text
+Codex, run ops_sla_followup for channels #support-kor and #support-global.
+sla_minutes=90, lookback_hours=24, max_messages=20, dry_run=true.
+```
+
+```text
+Codex, run ops_incident_create on #incident-war-room.
+title is "API Error Spike", summary is "5xx rate above threshold", owner is "@oncall-api", dry_run=true.
+```
+
+```text
+Codex, run ops_state_overview with collection=incidents and limit=10.
+```
+
+## Governance settings
+
+- `SLACK_ENABLE_AUDIT_LOG=true|false` (default: `true`)
+- `SLACK_AUDIT_LOG_PATH=<path>` (default: `~/.slack-max-api-mcp/audit.log`)
+- `SLACK_METHOD_ALLOWLIST=chat.postMessage,conversations.history`
+- `SLACK_METHOD_DENYLIST=users.deletePhoto`
+- `SLACK_METHOD_ALLOW_PREFIXES=chat.,conversations.`
+- `SLACK_METHOD_DENY_PREFIXES=admin.`
+
+If allowlist/allow-prefix is set, methods outside that policy are blocked.
 
 ## Install
 

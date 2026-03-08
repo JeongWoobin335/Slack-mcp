@@ -1,13 +1,14 @@
 {
   "name": "slack-max-api-mcp",
-  "version": "1.0.9",
-  "description": "Slack MCP server (stdio) for Codex and Claude Code",
+  "version": "1.0.10",
+  "description": "Operations-first Slack MCP server (stdio) for Codex and Claude Code",
   "main": "src/slack-mcp-server.js",
   "bin": {
     "slack-max-api-mcp": "src/slack-mcp-server.js"
   },
   "files": [
     "src",
+    "config",
     "data/slack-catalog.json",
     "README.md",
     ".env.example"

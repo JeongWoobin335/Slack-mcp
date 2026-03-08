@@ -1,0 +1,75 @@
+{
+  "playbooks": {
+    "incident_open": {
+      "summary": "Post an incident opening message with a standard operations template.",
+      "required_inputs": ["channel", "title"],
+      "supports_dry_run": true
+    },
+    "support_digest": {
+      "summary": "Build and optionally publish a support digest from channel activity.",
+      "required_inputs": ["channels"],
+      "supports_dry_run": true
+    },
+    "release_broadcast": {
+      "summary": "Broadcast a release announcement to multiple channels.",
+      "required_inputs": ["channels", "title", "summary"],
+      "supports_dry_run": true
+    }
+  },
+  "incidents": {
+    "default_channel": "",
+    "default_owner": "TBD",
+    "default_severity": "sev2",
+    "update_interval_minutes": 15,
+    "open_template": [
+      ":rotating_light: Incident Open - {{title}}",
+      "Severity: {{severity_upper}}",
+      "Owner: {{owner}}",
+      "Summary: {{summary}}",
+      "{{details_line}}",
+      "Next update: {{next_update_text}}"
+    ],
+    "update_template": [
+      ":information_source: Incident Update - {{title}}",
+      "Status: {{status_upper}}",
+      "Severity: {{severity_upper}}",
+      "Owner: {{owner}}",
+      "Summary: {{summary}}",
+      "{{details_line}}",
+      "Next update: {{next_update_text}}"
+    ],
+    "close_template": [
+      ":white_check_mark: Incident Resolved - {{title}}",
+      "Severity: {{severity_upper}}",
+      "Owner: {{owner}}",
+      "Resolution: {{resolution}}",
+      "{{details_line}}"
+    ]
+  },
+  "support_digest": {
+    "default_lookback_hours": 24,
+    "default_sla_minutes": 60,
+    "default_max_threads": 10,
+    "header_template": "Support Digest ({{lookback_hours}}h)",
+    "sla_template": "SLA threshold: {{sla_minutes}}m"
+  },
+  "broadcasts": {
+    "default_template": "release_default",
+    "default_mrkdwn": true,
+    "templates": {
+      "release_default": [
+        ":rocket: Release - {{title}}",
+        "{{summary}}",
+        "{{details}}"
+      ]
+    }
+  },
+  "followups": {
+    "default_sla_minutes": 60,
+    "default_lookback_hours": 24,
+    "default_max_threads_per_channel": 20,
+    "default_max_messages": 30,
+    "suppress_hours": 6,
+    "reminder_template": "Friendly reminder: this thread appears to be pending for more than {{sla_minutes}} minutes. Please provide an update."
+  }
+}

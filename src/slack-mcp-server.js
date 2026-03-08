@@ -12,11 +12,17 @@ const { z } = require("zod");
 
 const SERVER_NAME = "slack-max-api-mcp";
 const SERVER_VERSION = "2.0.0";
+const PACKAGE_ROOT = path.resolve(__dirname, "..");
 
 const SLACK_API_BASE_URL = process.env.SLACK_API_BASE_URL || "https://slack.com/api";
 
 const CATALOG_PATH =
   process.env.SLACK_CATALOG_PATH || path.join(process.cwd(), "data", "slack-catalog.json");
+const OPERATIONS_CONFIG_PATH =
+  process.env.SLACK_OPERATIONS_CONFIG_PATH || path.join(PACKAGE_ROOT, "config", "operations.json");
+const OPERATIONS_STATE_PATH =
+  process.env.SLACK_OPERATIONS_STATE_PATH ||
+  path.join(os.homedir(), ".slack-max-api-mcp", "operations-state.json");
 const METHOD_TOOL_PREFIX = process.env.SLACK_METHOD_TOOL_PREFIX || "slack_method";
 const TOOL_EXPOSURE_MODE = normalizeToolExposureMode(process.env.SLACK_TOOL_EXPOSURE_MODE);
 const ENABLE_METHOD_TOOLS = parseBooleanEnv(
@@ -29,12 +35,17 @@ const MAX_METHOD_TOOLS = parseNumberEnv(
 );
 const SMART_COMPAT_CORE_TOOLS = parseBooleanEnv(
   process.env.SLACK_SMART_COMPAT_CORE_TOOLS,
-  true
+  TOOL_EXPOSURE_MODE === "developer"
 );
+const EXPOSE_GATEWAY_TOOLS = TOOL_EXPOSURE_MODE === "developer";
+const EXPOSE_CORE_TOOLS = TOOL_EXPOSURE_MODE === "legacy" || SMART_COMPAT_CORE_TOOLS;
 const ENV_EXAMPLE_PATH = path.join(process.cwd(), ".env.example");
 const TOKEN_STORE_PATH =
   process.env.SLACK_TOKEN_STORE_PATH ||
   path.join(os.homedir(), ".slack-max-api-mcp", "tokens.json");
+const CLIENT_CONFIG_PATH =
+  process.env.SLACK_CLIENT_CONFIG_PATH ||
+  path.join(os.homedir(), ".slack-max-api-mcp", "client.json");
 const ALLOW_ENV_EXAMPLE_FALLBACK = process.env.SLACK_ALLOW_ENV_EXAMPLE_FALLBACK === "true";
 const OAUTH_CALLBACK_HOST = process.env.SLACK_OAUTH_CALLBACK_HOST || "127.0.0.1";
 const OAUTH_CALLBACK_PORT = Number(process.env.SLACK_OAUTH_CALLBACK_PORT || 8787);
@@ -56,6 +67,33 @@ const ONBOARD_CALLBACK_PATH = process.env.SLACK_ONBOARD_SERVER_CALLBACK_PATH || 
 const ONBOARD_CLAIM_TTL_MS = Number(process.env.SLACK_ONBOARD_CLAIM_TTL_MS || 10 * 60 * 1000);
 const ONBOARD_POLL_INTERVAL_MS = Number(process.env.SLACK_ONBOARD_POLL_INTERVAL_MS || 2000);
 const ONBOARD_TIMEOUT_MS = Number(process.env.SLACK_ONBOARD_TIMEOUT_MS || 5 * 60 * 1000);
+const GATEWAY_COMPAT_HOST = "43.202.54.65.sslip.io";
+const GATEWAY_URL_ENV = process.env.SLACK_GATEWAY_URL || "";
+const GATEWAY_API_KEY = process.env.SLACK_GATEWAY_API_KEY || "";
+const GATEWAY_PROFILE = process.env.SLACK_GATEWAY_PROFILE || "";
+const INSECURE_TLS = parseBooleanEnv(process.env.SLACK_INSECURE_TLS, false);
+const GATEWAY_SKIP_TLS_VERIFY = parseBooleanEnv(
+  process.env.SLACK_GATEWAY_SKIP_TLS_VERIFY,
+  INSECURE_TLS
+);
+const ONBOARD_SKIP_TLS_VERIFY = parseBooleanEnv(
+  process.env.SLACK_ONBOARD_SKIP_TLS_VERIFY,
+  INSECURE_TLS
+);
+const ENABLE_AUDIT_LOG = parseBooleanEnv(process.env.SLACK_ENABLE_AUDIT_LOG, true);
+const AUDIT_LOG_PATH =
+  process.env.SLACK_AUDIT_LOG_PATH ||
+  path.join(os.homedir(), ".slack-max-api-mcp", "audit.log");
+const METHOD_ALLOWLIST = new Set(parseScopeList(process.env.SLACK_METHOD_ALLOWLIST).map((v) => v.toLowerCase()));
+const METHOD_DENYLIST = new Set(parseScopeList(process.env.SLACK_METHOD_DENYLIST).map((v) => v.toLowerCase()));
+const METHOD_ALLOW_PREFIXES = parseScopeList(process.env.SLACK_METHOD_ALLOW_PREFIXES).map((v) =>
+  v.toLowerCase()
+);
+const METHOD_DENY_PREFIXES = parseScopeList(process.env.SLACK_METHOD_DENY_PREFIXES).map((v) =>
+  v.toLowerCase()
+);
+const OPERATIONS_CONFIG = loadOperationsConfig();
+const OPS_PLAYBOOKS = buildOperationsPlaybooks(OPERATIONS_CONFIG);
 function parseBooleanEnv(rawValue, defaultValue) {
   if (rawValue === undefined || rawValue === null || rawValue === "") return defaultValue;
   const normalized = String(rawValue).trim().toLowerCase();
@@ -72,9 +110,10 @@ function parseNumberEnv(rawValue, defaultValue) {
 }
 
 function normalizeToolExposureMode(rawValue) {
-  const normalized = String(rawValue || "smart").trim().toLowerCase();
+  const normalized = String(rawValue || "operations").trim().toLowerCase();
   if (normalized === "legacy") return "legacy";
-  return "smart";
+  if (normalized === "developer" || normalized === "smart") return "developer";
+  return "operations";
 }
 
 function parseSimpleEnvFile(filePath) {
@@ -105,9 +144,45 @@ function parseScopeList(raw) {
   return [...new Set(String(raw).split(",").map((part) => part.trim()).filter(Boolean))];
 }
 
+function normalizeOnboardNamePart(value, fallback) {
+  const normalized = String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9_-]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+  if (!normalized) return fallback;
+  return normalized;
+}
+
+function createAutoOnboardProfileName(prefix = "auto") {
+  let username = "user";
+  try {
+    username = os.userInfo().username || process.env.USERNAME || process.env.USER || "user";
+  } catch {
+    username = process.env.USERNAME || process.env.USER || "user";
+  }
+  const host = os.hostname() || "host";
+  const profilePrefix = normalizeOnboardNamePart(prefix, "auto");
+  const userPart = normalizeOnboardNamePart(username, "user");
+  const hostPart = normalizeOnboardNamePart(host, "host");
+  const rand = crypto.randomBytes(3).toString("hex");
+  return `${profilePrefix}-${userPart}-${hostPart}-${rand}`.slice(0, 80);
+}
+
 function ensureParentDirectory(filePath) {
   const dirPath = path.dirname(filePath);
   fs.mkdirSync(dirPath, { recursive: true });
+}
+
+function readJsonFileSafely(filePath, fallbackValue) {
+  if (!fs.existsSync(filePath)) return fallbackValue;
+
+  try {
+    const raw = fs.readFileSync(filePath, "utf8").replace(/^\uFEFF/, "");
+    return JSON.parse(raw);
+  } catch {
+    return fallbackValue;
+  }
 }
 
 function emptyTokenStore() {
@@ -123,20 +198,388 @@ function normalizeTokenStore(value) {
   return out;
 }
 
-function loadTokenStore() {
-  if (!fs.existsSync(TOKEN_STORE_PATH)) return emptyTokenStore();
+function deepMergeObjects(baseValue, overrideValue) {
+  if (Array.isArray(overrideValue)) {
+    return overrideValue.slice();
+  }
+
+  if (!overrideValue || typeof overrideValue !== "object") {
+    return overrideValue === undefined ? baseValue : overrideValue;
+  }
+
+  const baseObject =
+    baseValue && typeof baseValue === "object" && !Array.isArray(baseValue) ? baseValue : {};
+  const merged = { ...baseObject };
+
+  for (const [key, value] of Object.entries(overrideValue)) {
+    merged[key] = deepMergeObjects(baseObject[key], value);
+  }
+
+  return merged;
+}
+
+function defaultOperationsConfig() {
+  return {
+    playbooks: {
+      incident_open: {
+        summary: "Post an incident opening message with a standard operations template.",
+        required_inputs: ["channel", "title"],
+        supports_dry_run: true,
+      },
+      support_digest: {
+        summary: "Build and optionally publish a support digest from channel activity.",
+        required_inputs: ["channels"],
+        supports_dry_run: true,
+      },
+      release_broadcast: {
+        summary: "Broadcast a release announcement to multiple channels.",
+        required_inputs: ["channels", "title", "summary"],
+        supports_dry_run: true,
+      },
+    },
+    incidents: {
+      default_channel: "",
+      default_owner: "TBD",
+      default_severity: "sev2",
+      update_interval_minutes: 15,
+      open_template: [
+        ":rotating_light: Incident Open - {{title}}",
+        "Severity: {{severity_upper}}",
+        "Owner: {{owner}}",
+        "Summary: {{summary}}",
+        "{{details_line}}",
+        "Next update: {{next_update_text}}",
+      ],
+      update_template: [
+        ":information_source: Incident Update - {{title}}",
+        "Status: {{status_upper}}",
+        "Severity: {{severity_upper}}",
+        "Owner: {{owner}}",
+        "Summary: {{summary}}",
+        "{{details_line}}",
+        "Next update: {{next_update_text}}",
+      ],
+      close_template: [
+        ":white_check_mark: Incident Resolved - {{title}}",
+        "Severity: {{severity_upper}}",
+        "Owner: {{owner}}",
+        "Resolution: {{resolution}}",
+        "{{details_line}}",
+      ],
+    },
+    support_digest: {
+      default_lookback_hours: 24,
+      default_sla_minutes: 60,
+      default_max_threads: 10,
+      header_template: "Support Digest ({{lookback_hours}}h)",
+      sla_template: "SLA threshold: {{sla_minutes}}m",
+    },
+    broadcasts: {
+      default_template: "release_default",
+      default_mrkdwn: true,
+      templates: {
+        release_default: [
+          ":rocket: Release - {{title}}",
+          "{{summary}}",
+          "{{details}}",
+        ],
+      },
+    },
+    followups: {
+      default_sla_minutes: 60,
+      default_lookback_hours: 24,
+      default_max_threads_per_channel: 20,
+      default_max_messages: 30,
+      suppress_hours: 6,
+      reminder_template:
+        "Friendly reminder: this thread appears to be pending for more than {{sla_minutes}} minutes. Please provide an update.",
+    },
+  };
+}
+
+function loadOperationsConfig() {
+  const defaults = defaultOperationsConfig();
+  if (!fs.existsSync(OPERATIONS_CONFIG_PATH)) {
+    return defaults;
+  }
 
   try {
-    const parsed = JSON.parse(fs.readFileSync(TOKEN_STORE_PATH, "utf8"));
-    return normalizeTokenStore(parsed);
-  } catch {
-    return emptyTokenStore();
+    const parsed = JSON.parse(fs.readFileSync(OPERATIONS_CONFIG_PATH, "utf8"));
+    return deepMergeObjects(defaults, parsed);
+  } catch (error) {
+    console.error(
+      `[${SERVER_NAME}] failed to load operations config at ${OPERATIONS_CONFIG_PATH}: ${error}`
+    );
+    return defaults;
   }
+}
+
+function buildOperationsPlaybooks(config) {
+  const playbooks =
+    config && config.playbooks && typeof config.playbooks === "object" ? config.playbooks : {};
+
+  return Object.entries(playbooks).map(([id, meta]) => ({
+    id,
+    summary: meta?.summary || "",
+    required_inputs: Array.isArray(meta?.required_inputs) ? meta.required_inputs : [],
+    supports_dry_run: meta?.supports_dry_run !== false,
+  }));
+}
+
+function normalizeObjectMap(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+  return value;
+}
+
+function emptyOperationsState() {
+  return {
+    version: 1,
+    updated_at: null,
+    incidents: {},
+    digests: {},
+    broadcasts: {},
+    followups: {},
+    playbook_runs: [],
+  };
+}
+
+function normalizeOperationsState(value) {
+  const out = {
+    ...emptyOperationsState(),
+    ...(value && typeof value === "object" ? value : {}),
+  };
+  out.incidents = normalizeObjectMap(out.incidents);
+  out.digests = normalizeObjectMap(out.digests);
+  out.broadcasts = normalizeObjectMap(out.broadcasts);
+  out.followups = normalizeObjectMap(out.followups);
+  out.playbook_runs = Array.isArray(out.playbook_runs) ? out.playbook_runs : [];
+  return out;
+}
+
+function loadOperationsState() {
+  if (!fs.existsSync(OPERATIONS_STATE_PATH)) return emptyOperationsState();
+
+  try {
+    const parsed = JSON.parse(fs.readFileSync(OPERATIONS_STATE_PATH, "utf8"));
+    return normalizeOperationsState(parsed);
+  } catch {
+    return emptyOperationsState();
+  }
+}
+
+function saveOperationsState(state) {
+  ensureParentDirectory(OPERATIONS_STATE_PATH);
+  const payload = normalizeOperationsState({
+    ...state,
+    updated_at: new Date().toISOString(),
+  });
+  fs.writeFileSync(OPERATIONS_STATE_PATH, JSON.stringify(payload, null, 2), "utf8");
+}
+
+function mutateOperationsState(mutator) {
+  const state = loadOperationsState();
+  const result = mutator(state);
+  saveOperationsState(state);
+  return result;
+}
+
+function createOperationId(prefix) {
+  return `${prefix}_${Date.now().toString(36)}_${crypto.randomBytes(3).toString("hex")}`;
+}
+
+function appendRecordEvent(record, event) {
+  const nextEvent = {
+    ...event,
+    recorded_at: event?.recorded_at || new Date().toISOString(),
+  };
+  const events = Array.isArray(record?.events) ? record.events.slice(-49) : [];
+  events.push(nextEvent);
+  record.events = events;
+}
+
+function upsertOperationRecord(state, collectionName, record) {
+  const collection = normalizeObjectMap(state?.[collectionName]);
+  collection[record.id] = {
+    ...record,
+    updated_at: record.updated_at || new Date().toISOString(),
+  };
+  state[collectionName] = collection;
+  return collection[record.id];
+}
+
+function appendPlaybookRun(state, runRecord) {
+  const records = Array.isArray(state?.playbook_runs) ? state.playbook_runs : [];
+  records.push(runRecord);
+  state.playbook_runs = records.slice(-200);
+}
+
+function getOperationRecord(state, collectionName, recordId) {
+  const collection = normalizeObjectMap(state?.[collectionName]);
+  return collection[recordId] || null;
+}
+
+function listOperationRecords(collection, options = {}) {
+  const status = options.status ? String(options.status).trim().toLowerCase() : "";
+  const limit = Math.max(1, Math.min(200, Number(options.limit) || 20));
+
+  return Object.values(normalizeObjectMap(collection))
+    .filter((record) => {
+      if (!status) return true;
+      return String(record?.status || "").trim().toLowerCase() === status;
+    })
+    .sort((a, b) =>
+      String(b?.updated_at || b?.created_at || "").localeCompare(
+        String(a?.updated_at || a?.created_at || "")
+      )
+    )
+    .slice(0, limit);
+}
+
+function buildOperationsStateSummary(state) {
+  const incidents = Object.values(normalizeObjectMap(state?.incidents));
+  const broadcasts = Object.values(normalizeObjectMap(state?.broadcasts));
+  const digests = Object.values(normalizeObjectMap(state?.digests));
+  const followups = Object.values(normalizeObjectMap(state?.followups));
+
+  return {
+    incidents_total: incidents.length,
+    incidents_open: incidents.filter((item) => item?.status !== "closed").length,
+    broadcasts_total: broadcasts.length,
+    broadcasts_sent: broadcasts.filter((item) => item?.status === "sent").length,
+    digests_total: digests.length,
+    followups_total: followups.length,
+    playbook_runs_total: Array.isArray(state?.playbook_runs) ? state.playbook_runs.length : 0,
+    last_updated_at: state?.updated_at || null,
+  };
+}
+
+function normalizeTemplate(template) {
+  if (Array.isArray(template)) {
+    return template.map((line) => String(line));
+  }
+  if (typeof template === "string") {
+    return template.split(/\r?\n/);
+  }
+  return [];
+}
+
+function renderTemplateText(template, context, separator = "\n") {
+  return normalizeTemplate(template)
+    .map((line) =>
+      String(line).replace(/\{\{([a-zA-Z0-9_]+)\}\}/g, (_, key) => {
+        const value = context?.[key];
+        return value === undefined || value === null ? "" : String(value);
+      })
+    )
+    .map((line) => line.trimEnd())
+    .filter((line) => line.trim().length > 0)
+    .join(separator);
+}
+
+function loadTokenStore() {
+  return normalizeTokenStore(readJsonFileSafely(TOKEN_STORE_PATH, emptyTokenStore()));
 }
 
 function saveTokenStore(store) {
   ensureParentDirectory(TOKEN_STORE_PATH);
   fs.writeFileSync(TOKEN_STORE_PATH, JSON.stringify(normalizeTokenStore(store), null, 2), "utf8");
+}
+
+function emptyClientConfig() {
+  return {
+    version: 1,
+    gateway_url: "",
+    gateway_api_key: "",
+    profile: "",
+    updated_at: "",
+  };
+}
+
+function normalizeClientConfig(value) {
+  if (!value || typeof value !== "object") return emptyClientConfig();
+  return { ...emptyClientConfig(), ...value };
+}
+
+function loadClientConfig() {
+  return normalizeClientConfig(readJsonFileSafely(CLIENT_CONFIG_PATH, emptyClientConfig()));
+}
+
+function saveClientConfig(config) {
+  ensureParentDirectory(CLIENT_CONFIG_PATH);
+  fs.writeFileSync(
+    CLIENT_CONFIG_PATH,
+    JSON.stringify(normalizeClientConfig(config), null, 2),
+    "utf8"
+  );
+}
+
+function getRuntimeGatewayConfig() {
+  const config = loadClientConfig();
+  return {
+    url: (GATEWAY_URL_ENV || config.gateway_url || "").replace(/\/+$/, ""),
+    apiKey: GATEWAY_API_KEY || config.gateway_api_key || "",
+    profile:
+      process.env.SLACK_PROFILE ||
+      GATEWAY_PROFILE ||
+      config.profile ||
+      "",
+  };
+}
+
+function getAuthStatusSummary() {
+  const runtimeGateway = getRuntimeGatewayConfig();
+  const tokenStore = loadTokenStore();
+  const selectedProfile = resolveTokenStoreProfileBySelector(
+    tokenStore,
+    process.env.SLACK_PROFILE
+  );
+  const envTokensPresent = {
+    bot: Boolean(process.env.SLACK_BOT_TOKEN),
+    user: Boolean(process.env.SLACK_USER_TOKEN),
+    generic: Boolean(process.env.SLACK_TOKEN),
+  };
+
+  const gatewayReady = Boolean(runtimeGateway.url && runtimeGateway.apiKey && runtimeGateway.profile);
+  const localTokenReady = Boolean(
+    selectedProfile ||
+      envTokensPresent.bot ||
+      envTokensPresent.user ||
+      envTokensPresent.generic
+  );
+
+  if (gatewayReady) {
+    return {
+      ready: true,
+      mode: "gateway_onboard",
+      summary:
+        "This PC is ready via central gateway onboarding. Local Slack xoxb/xoxp tokens are not required on this PC.",
+      runtimeGateway,
+      selectedProfile,
+      envTokensPresent,
+    };
+  }
+
+  if (localTokenReady) {
+    return {
+      ready: true,
+      mode: "local_tokens",
+      summary:
+        "This PC is ready via locally available Slack credentials.",
+      runtimeGateway,
+      selectedProfile,
+      envTokensPresent,
+    };
+  }
+
+  return {
+    ready: false,
+    mode: "not_configured",
+    summary:
+      "This PC is not ready yet. Run `slack-max-api-mcp onboard run` or configure local Slack tokens.",
+    runtimeGateway,
+    selectedProfile,
+    envTokensPresent,
+  };
 }
 
 function resolveTokenStoreProfileBySelector(store, selector) {
@@ -278,8 +721,487 @@ function toRecordObject(value) {
   return value;
 }
 
+function buildGatewayAuthHeaders(apiKey) {
+  const headers = { "Content-Type": "application/json; charset=utf-8" };
+  if (apiKey) {
+    headers.Authorization = `Bearer ${apiKey}`;
+    headers["X-API-Key"] = apiKey;
+  }
+  return headers;
+}
+
+function shouldBypassTlsVerification(targetUrl, mode = "generic") {
+  try {
+    const hostname = new URL(targetUrl).hostname.toLowerCase();
+    if (hostname === GATEWAY_COMPAT_HOST) return true;
+  } catch {
+    // fall through to env-based flags
+  }
+
+  if (mode === "gateway") return GATEWAY_SKIP_TLS_VERIFY;
+  if (mode === "onboard") return ONBOARD_SKIP_TLS_VERIFY;
+  return INSECURE_TLS;
+}
+
+let tlsCompatWarningShown = false;
+
+async function fetchWithCompatTls(targetUrl, options = {}, mode = "generic") {
+  if (!shouldBypassTlsVerification(targetUrl, mode)) {
+    return fetch(targetUrl, options);
+  }
+
+  const previous = process.env.NODE_TLS_REJECT_UNAUTHORIZED;
+  process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
+  if (!tlsCompatWarningShown) {
+    tlsCompatWarningShown = true;
+    console.error(
+      `[${SERVER_NAME}] warning: TLS verification is temporarily disabled for ${mode} requests to support the legacy sslip.io gateway.`
+    );
+  }
+
+  try {
+    return await fetch(targetUrl, options);
+  } finally {
+    if (previous === undefined) {
+      delete process.env.NODE_TLS_REJECT_UNAUTHORIZED;
+    } else {
+      process.env.NODE_TLS_REJECT_UNAUTHORIZED = previous;
+    }
+  }
+}
+
+function truncateText(value, maxLen = 220) {
+  const text = String(value || "");
+  if (text.length <= maxLen) return text;
+  return `${text.slice(0, maxLen - 3)}...`;
+}
+
+function safeJsonlAppend(filePath, payload) {
+  if (!ENABLE_AUDIT_LOG) return;
+  try {
+    ensureParentDirectory(filePath);
+    fs.appendFileSync(filePath, `${JSON.stringify(payload)}\n`, "utf8");
+  } catch {
+    // Ignore audit logging failures to avoid breaking API tools.
+  }
+}
+
+function methodMatchesPrefix(method, prefixes) {
+  return prefixes.some((prefix) => method.startsWith(prefix));
+}
+
+function assertMethodPolicy(method) {
+  const normalizedMethod = String(method || "").trim().toLowerCase();
+  if (!normalizedMethod) {
+    throw new Error("Slack method name is required.");
+  }
+
+  if (METHOD_DENYLIST.has(normalizedMethod) || methodMatchesPrefix(normalizedMethod, METHOD_DENY_PREFIXES)) {
+    throw new Error(`Method blocked by policy: ${method}`);
+  }
+
+  if (METHOD_ALLOWLIST.size === 0 && METHOD_ALLOW_PREFIXES.length === 0) {
+    return;
+  }
+
+  const allowed =
+    METHOD_ALLOWLIST.has(normalizedMethod) || methodMatchesPrefix(normalizedMethod, METHOD_ALLOW_PREFIXES);
+  if (!allowed) {
+    throw new Error(`Method not allowed by policy: ${method}`);
+  }
+}
+
+function summarizeTopParticipants(messages, participantLimit = 5) {
+  const counter = new Map();
+  for (const message of messages) {
+    const user = String(message?.user || "");
+    if (!user) continue;
+    counter.set(user, (counter.get(user) || 0) + 1);
+  }
+
+  return [...counter.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, participantLimit)
+    .map(([user, message_count]) => ({ user, message_count }));
+}
+
+function summarizeChannelMessages(messages, options = {}) {
+  const participantLimit = options.participantLimit ?? 5;
+  const sampleSize = options.sampleSize ?? 5;
+  const uniqueUsers = new Set();
+  let threadRoots = 0;
+  let totalReplies = 0;
+  let totalReactions = 0;
+  let totalAttachedFiles = 0;
+
+  for (const message of messages) {
+    const user = String(message?.user || "");
+    if (user) uniqueUsers.add(user);
+
+    const replyCount = Number(message?.reply_count || 0);
+    if (replyCount > 0) {
+      threadRoots += 1;
+      totalReplies += replyCount;
+    }
+
+    const reactions = Array.isArray(message?.reactions) ? message.reactions : [];
+    for (const reaction of reactions) {
+      totalReactions += Number(reaction?.count || 0);
+    }
+
+    const files = Array.isArray(message?.files) ? message.files : [];
+    totalAttachedFiles += files.length;
+  }
+
+  const latestSamples = messages.slice(0, sampleSize).map((message) => ({
+    ts: message?.ts || "",
+    user: message?.user || null,
+    text: truncateText(message?.text || ""),
+    subtype: message?.subtype || null,
+  }));
+
+  return {
+    message_count: messages.length,
+    unique_user_count: uniqueUsers.size,
+    thread_root_count: threadRoots,
+    threaded_reply_count: totalReplies,
+    reaction_count: totalReactions,
+    attached_file_count: totalAttachedFiles,
+    top_participants: summarizeTopParticipants(messages, participantLimit),
+    latest_samples: latestSamples,
+  };
+}
+
+function safeReadAuditEntries(limit, filters = {}) {
+  if (!fs.existsSync(AUDIT_LOG_PATH)) return [];
+  const raw = fs.readFileSync(AUDIT_LOG_PATH, "utf8");
+  const lines = raw.split(/\r?\n/).filter(Boolean);
+  const parsed = [];
+
+  for (const line of lines) {
+    try {
+      const entry = JSON.parse(line);
+      if (filters.event && entry?.event !== filters.event) continue;
+      if (filters.method && entry?.method !== filters.method) continue;
+      parsed.push(entry);
+    } catch {
+      // Skip malformed lines.
+    }
+  }
+
+  const tail = parsed.slice(-limit).reverse();
+  return tail;
+}
+
+function normalizeChannelReference(channelRef) {
+  return String(channelRef || "").trim().replace(/^#/, "");
+}
+
+function isLikelyChannelId(value) {
+  return /^[CGD][A-Z0-9]{8,}$/.test(String(value || "").trim());
+}
+
+async function resolveChannelReference(channelRef, tokenOverride) {
+  const normalized = normalizeChannelReference(channelRef);
+  if (!normalized) {
+    throw new Error("Channel reference is required.");
+  }
+
+  if (isLikelyChannelId(normalized)) {
+    return { id: normalized, name: null, source: "id", reference: channelRef };
+  }
+
+  let cursor = undefined;
+  let page = 0;
+  const target = normalized.toLowerCase();
+  while (page < 15) {
+    page += 1;
+    const data = await callSlackApi(
+      "conversations.list",
+      {
+        types: "public_channel,private_channel",
+        exclude_archived: true,
+        limit: 200,
+        cursor,
+      },
+      tokenOverride
+    );
+
+    const channels = Array.isArray(data?.channels) ? data.channels : [];
+    const exact = channels.find((channel) => String(channel?.name || "").toLowerCase() === target);
+    if (exact?.id) {
+      return {
+        id: exact.id,
+        name: exact.name || normalized,
+        source: "name",
+        reference: channelRef,
+      };
+    }
+
+    cursor = data?.response_metadata?.next_cursor || "";
+    if (!cursor) break;
+  }
+
+  throw new Error(`Channel not found by name: ${channelRef}`);
+}
+
+async function resolveChannelReferences(channelRefs, tokenOverride) {
+  const refs = Array.isArray(channelRefs) ? channelRefs : [];
+  if (refs.length === 0) {
+    throw new Error("At least one channel reference is required.");
+  }
+
+  const resolved = [];
+  const seen = new Set();
+  for (const ref of refs) {
+    const item = await resolveChannelReference(ref, tokenOverride);
+    if (seen.has(item.id)) continue;
+    seen.add(item.id);
+    resolved.push(item);
+  }
+  return resolved;
+}
+
+function buildDeferredChannelTargets(channelRefs) {
+  const refs = Array.isArray(channelRefs) ? channelRefs : [];
+  return refs
+    .map((ref) => {
+      const original = String(ref || "").trim();
+      const normalized = normalizeChannelReference(ref);
+      if (!normalized) return null;
+
+      return {
+        id: isLikelyChannelId(normalized) ? normalized : null,
+        name: isLikelyChannelId(normalized) ? null : normalized,
+        reference: original || normalized,
+      };
+    })
+    .filter(Boolean);
+}
+
+function extractChannelTargetReferences(channelTargets) {
+  const targets = Array.isArray(channelTargets) ? channelTargets : [];
+  return targets
+    .map((item) => item?.reference || item?.id || item?.name || "")
+    .map((value) => String(value || "").trim())
+    .filter(Boolean);
+}
+
+async function findUnansweredThreadsInChannel({
+  channel,
+  lookbackHours = 24,
+  minAgeMinutes = 30,
+  maxThreads = 20,
+  includeBotReplies = false,
+  tokenOverride,
+}) {
+  const oldest = String(Math.floor(Date.now() / 1000 - lookbackHours * 3600));
+  const nowMs = Date.now();
+  const history = await callSlackApi(
+    "conversations.history",
+    {
+      channel,
+      oldest,
+      inclusive: true,
+      limit: Math.min(1000, Math.max(10, maxThreads * 10)),
+    },
+    tokenOverride
+  );
+
+  const historyMessages = Array.isArray(history?.messages) ? history.messages : [];
+  const rootMessages = historyMessages.filter(
+    (message) => message?.ts && (!message.thread_ts || message.thread_ts === message.ts)
+  );
+  const candidates = rootMessages.filter((message) => {
+    const text = String(message?.text || "");
+    if (!text.includes("?") && Number(message?.reply_count || 0) <= 0) return false;
+    const ageMs = nowMs - Number(message.ts) * 1000;
+    return Number.isFinite(ageMs) && ageMs >= minAgeMinutes * 60 * 1000;
+  });
+
+  const unanswered = [];
+  let scanned = 0;
+  const scanLimit = Math.min(candidates.length, Math.max(1, maxThreads * 5));
+
+  for (let idx = 0; idx < scanLimit; idx += 1) {
+    if (unanswered.length >= maxThreads) break;
+    const root = candidates[idx];
+    scanned += 1;
+    const replyCount = Number(root?.reply_count || 0);
+
+    if (replyCount <= 0) {
+      unanswered.push({
+        channel,
+        thread_ts: root.ts,
+        root_user: root.user || null,
+        root_text: truncateText(root.text || ""),
+        reason: "no_replies",
+        reply_count: 0,
+        age_minutes: Math.floor((nowMs - Number(root.ts) * 1000) / (60 * 1000)),
+      });
+      continue;
+    }
+
+    try {
+      const repliesData = await callSlackApi(
+        "conversations.replies",
+        { channel, ts: root.ts, limit: Math.min(100, replyCount + 2) },
+        tokenOverride
+      );
+      const replies = Array.isArray(repliesData?.messages) ? repliesData.messages.slice(1) : [];
+      const hasExternalReply = replies.some((reply) => {
+        if (!includeBotReplies && reply?.bot_id) return false;
+        const replyUser = String(reply?.user || "");
+        return replyUser && replyUser !== String(root?.user || "");
+      });
+
+      if (!hasExternalReply) {
+        unanswered.push({
+          channel,
+          thread_ts: root.ts,
+          root_user: root.user || null,
+          root_text: truncateText(root.text || ""),
+          reason: "replies_only_from_author_or_bots",
+          reply_count: replyCount,
+          age_minutes: Math.floor((nowMs - Number(root.ts) * 1000) / (60 * 1000)),
+        });
+      }
+    } catch (error) {
+      unanswered.push({
+        channel,
+        thread_ts: root.ts,
+        root_user: root.user || null,
+        root_text: truncateText(root.text || ""),
+        reason: "thread_check_failed",
+        reply_count: replyCount,
+        error: error instanceof Error ? error.message : String(error),
+        age_minutes: Math.floor((nowMs - Number(root.ts) * 1000) / (60 * 1000)),
+      });
+    }
+  }
+
+  return {
+    channel,
+    lookback_hours: lookbackHours,
+    min_age_minutes: minAgeMinutes,
+    scanned_candidates: scanned,
+    unanswered_count: unanswered.length,
+    unanswered_threads: unanswered,
+    history_has_more: Boolean(history?.has_more),
+    next_cursor: history?.response_metadata?.next_cursor || null,
+  };
+}
+
+function buildSupportDigestText(digestItems, lookbackHours, slaMinutes) {
+  const lines = [
+    renderTemplateText(OPERATIONS_CONFIG.support_digest.header_template, {
+      lookback_hours: lookbackHours,
+    }),
+    renderTemplateText(OPERATIONS_CONFIG.support_digest.sla_template, {
+      sla_minutes: slaMinutes,
+    }),
+    "",
+  ];
+
+  for (const item of digestItems) {
+    lines.push(
+      `#${item.channel_name || item.channel_reference || item.channel} | messages=${item.message_count} | participants=${item.unique_user_count} | unanswered=${item.unanswered_count}`
+    );
+  }
+
+  return lines.join("\n");
+}
+
+function buildIncidentNextUpdateTs(nextUpdateMinutes) {
+  const minutes =
+    Math.max(
+      1,
+      Number(nextUpdateMinutes || OPERATIONS_CONFIG.incidents.update_interval_minutes || 15)
+    ) || 15;
+  return Math.floor(Date.now() / 1000 + minutes * 60);
+}
+
+function buildIncidentTemplateContext(payload = {}) {
+  const severity = String(
+    payload.severity || OPERATIONS_CONFIG.incidents.default_severity || "sev2"
+  ).toLowerCase();
+  const status = String(payload.status || "open").toLowerCase();
+  const owner = payload.owner || OPERATIONS_CONFIG.incidents.default_owner || "TBD";
+  const details = payload.details || "";
+
+  return {
+    title: payload.title || "Untitled incident",
+    severity,
+    severity_upper: severity.toUpperCase(),
+    status,
+    status_upper: status.toUpperCase(),
+    owner,
+    summary: payload.summary || "No summary provided.",
+    details,
+    details_line: details ? `Details: ${details}` : "",
+    resolution: payload.resolution || "Resolved",
+    next_update_text: payload.next_update_ts
+      ? `<!date^${payload.next_update_ts}^{time}|scheduled>`
+      : "TBD",
+  };
+}
+
+function buildIncidentOpenText(payload) {
+  return renderTemplateText(
+    OPERATIONS_CONFIG.incidents.open_template,
+    buildIncidentTemplateContext(payload),
+    "\n"
+  );
+}
+
+function buildIncidentUpdateText(payload) {
+  return renderTemplateText(
+    OPERATIONS_CONFIG.incidents.update_template,
+    buildIncidentTemplateContext(payload),
+    "\n"
+  );
+}
+
+function buildIncidentCloseText(payload) {
+  return renderTemplateText(
+    OPERATIONS_CONFIG.incidents.close_template,
+    buildIncidentTemplateContext(payload),
+    "\n"
+  );
+}
+
+function buildBroadcastText(payload = {}) {
+  if (payload.text) return String(payload.text);
+
+  const templates = normalizeObjectMap(OPERATIONS_CONFIG.broadcasts.templates);
+  const templateId = payload.template_id || OPERATIONS_CONFIG.broadcasts.default_template;
+  const template =
+    templates[templateId] ||
+    templates[OPERATIONS_CONFIG.broadcasts.default_template] || [
+      "{{title}}",
+      "{{summary}}",
+      "{{details}}",
+    ];
+
+  return renderTemplateText(
+    template,
+    {
+      title: payload.title || "",
+      summary: payload.summary || "",
+      details: payload.details || "",
+    },
+    "\n\n"
+  );
+}
+
+function buildFollowupStateKey(channel, threadTs) {
+  return `${String(channel || "").trim()}:${String(threadTs || "").trim()}`;
+}
+
 async function callSlackApiWithToken(method, params = {}, token, tokenSource) {
   const url = `${SLACK_API_BASE_URL.replace(/\/+$/, "")}/${method}`;
+  const startedAt = Date.now();
+  const paramKeys = Object.keys(toRecordObject(params));
 
   const response = await fetch(url, {
     method: "POST",
@@ -295,10 +1217,32 @@ async function callSlackApiWithToken(method, params = {}, token, tokenSource) {
   try {
     data = JSON.parse(text);
   } catch {
+    safeJsonlAppend(AUDIT_LOG_PATH, {
+      ts: new Date().toISOString(),
+      event: "slack_api_call",
+      method,
+      ok: false,
+      token_source: tokenSource,
+      status: response.status,
+      duration_ms: Date.now() - startedAt,
+      params_keys: paramKeys,
+      error: "non_json_response",
+    });
     throw new Error(`Slack API returned non-JSON for ${method} (HTTP ${response.status}).`);
   }
 
   if (!response.ok) {
+    safeJsonlAppend(AUDIT_LOG_PATH, {
+      ts: new Date().toISOString(),
+      event: "slack_api_call",
+      method,
+      ok: false,
+      token_source: tokenSource,
+      status: response.status,
+      duration_ms: Date.now() - startedAt,
+      params_keys: paramKeys,
+      error: data.error || "unknown_error",
+    });
     const error = new Error(
       `Slack API HTTP ${response.status} for ${method}: ${data.error || "unknown_error"}`
     );
@@ -311,6 +1255,17 @@ async function callSlackApiWithToken(method, params = {}, token, tokenSource) {
   }
 
   if (!data.ok) {
+    safeJsonlAppend(AUDIT_LOG_PATH, {
+      ts: new Date().toISOString(),
+      event: "slack_api_call",
+      method,
+      ok: false,
+      token_source: tokenSource,
+      status: response.status,
+      duration_ms: Date.now() - startedAt,
+      params_keys: paramKeys,
+      error: data.error || "unknown_error",
+    });
     const extraParts = [];
     if (data.needed) extraParts.push(`needed=${data.needed}`);
     if (data.provided) extraParts.push(`provided=${data.provided}`);
@@ -325,7 +1280,115 @@ async function callSlackApiWithToken(method, params = {}, token, tokenSource) {
     throw error;
   }
 
+  safeJsonlAppend(AUDIT_LOG_PATH, {
+    ts: new Date().toISOString(),
+    event: "slack_api_call",
+    method,
+    ok: true,
+    token_source: tokenSource,
+    status: response.status,
+    duration_ms: Date.now() - startedAt,
+    params_keys: paramKeys,
+  });
+
   return data;
+}
+
+async function callSlackApiViaGateway(method, params = {}, tokenOverride, options = {}) {
+  const runtimeGateway = getRuntimeGatewayConfig();
+  if (!runtimeGateway.url) {
+    throw new Error(
+      "Gateway URL is missing. Run `slack-max-api-mcp onboard run` or set SLACK_GATEWAY_URL."
+    );
+  }
+
+  const response = await fetchWithCompatTls(
+    `${runtimeGateway.url}/api/slack/call`,
+    {
+      method: "POST",
+      headers: buildGatewayAuthHeaders(runtimeGateway.apiKey),
+      body: JSON.stringify({
+        method,
+        params,
+        token_override: tokenOverride || undefined,
+        profile_selector: options.profileSelector || runtimeGateway.profile || undefined,
+        preferred_token_type:
+          options.preferredTokenType || process.env.SLACK_DEFAULT_TOKEN_TYPE || undefined,
+      }),
+    },
+    "gateway"
+  );
+
+  const text = await response.text();
+  let body;
+  try {
+    body = JSON.parse(text);
+  } catch {
+    throw new Error(`Gateway returned non-JSON for ${method} (HTTP ${response.status}).`);
+  }
+
+  if (!response.ok) {
+    const error = new Error(
+      `Gateway HTTP ${response.status} for ${method}: ${body?.error || body?.message || "unknown_error"}`
+    );
+    error.http_status = response.status;
+    error.slack_error = body?.slack_error || body?.error || "gateway_error";
+    error.needed = body?.needed;
+    error.provided = body?.provided;
+    error.token_source = body?.token_source || "gateway";
+    throw error;
+  }
+
+  if (!body?.ok) {
+    const error = new Error(`Gateway call failed for ${method}: ${body?.error || "unknown_error"}`);
+    error.slack_error = body?.slack_error || body?.error || "gateway_error";
+    error.needed = body?.needed;
+    error.provided = body?.provided;
+    error.token_source = body?.token_source || "gateway";
+    throw error;
+  }
+
+  return body.data;
+}
+
+async function slackHttpViaGateway(input) {
+  const runtimeGateway = getRuntimeGatewayConfig();
+  if (!runtimeGateway.url) {
+    throw new Error(
+      "Gateway URL is missing. Run `slack-max-api-mcp onboard run` or set SLACK_GATEWAY_URL."
+    );
+  }
+
+  const response = await fetchWithCompatTls(
+    `${runtimeGateway.url}/api/slack/http`,
+    {
+      method: "POST",
+      headers: buildGatewayAuthHeaders(runtimeGateway.apiKey),
+      body: JSON.stringify({
+        ...input,
+        profile_selector: input.profile_selector || runtimeGateway.profile || undefined,
+        preferred_token_type:
+          input.preferred_token_type || process.env.SLACK_DEFAULT_TOKEN_TYPE || undefined,
+      }),
+    },
+    "gateway"
+  );
+
+  const text = await response.text();
+  let body;
+  try {
+    body = JSON.parse(text);
+  } catch {
+    throw new Error(`Gateway returned non-JSON for HTTP proxy (HTTP ${response.status}).`);
+  }
+
+  if (!response.ok) {
+    throw new Error(`Gateway HTTP ${response.status}: ${body?.error || "gateway_error"}`);
+  }
+  if (!body?.ok) {
+    throw new Error(`Gateway HTTP proxy failed: ${body?.error || "gateway_error"}`);
+  }
+  return body.data;
 }
 
 async function callSlackApiWithCandidates(method, params, candidates) {
@@ -348,10 +1411,15 @@ async function callSlackApiWithCandidates(method, params, candidates) {
 }
 
 async function callSlackApi(method, params = {}, tokenOverride, options = {}) {
+  assertMethodPolicy(method);
+  const runtimeGateway = getRuntimeGatewayConfig();
+  if (runtimeGateway.url) {
+    return callSlackApiViaGateway(method, params, tokenOverride, options);
+  }
   const candidates = getSlackTokenCandidates(tokenOverride, options);
   if (candidates.length === 0) {
     throw new Error(
-      "Slack token is missing. Set SLACK_BOT_TOKEN/SLACK_USER_TOKEN/SLACK_TOKEN or run slack-max-api-mcp oauth login."
+      "Slack token is missing. Set SLACK_BOT_TOKEN/SLACK_USER_TOKEN/SLACK_TOKEN, run `slack-max-api-mcp oauth login`, or use `slack-max-api-mcp onboard run` for gateway mode."
     );
   }
 
@@ -622,6 +1690,18 @@ function formatTokenProfileSummary(key, profile, isDefault) {
   ].join("\n");
 }
 
+function formatClientConfigSummary(config) {
+  const hasGateway = Boolean(config?.gateway_url);
+  const hasApiKey = Boolean(config?.gateway_api_key);
+  const profile = config?.profile || "";
+  const updatedAt = config?.updated_at || "unknown";
+
+  return [
+    `[gateway] client config: ${CLIENT_CONFIG_PATH}`,
+    `    gateway=${hasGateway ? config.gateway_url : "not_set"} | api_key=${hasApiKey ? "present" : "missing"} | profile=${profile || "not_set"} | updated_at=${updatedAt}`,
+  ].join("\n");
+}
+
 async function runOauthLogin(args) {
   const { options } = parseCliArgs(args);
   const clientId = options["client-id"] || process.env.SLACK_CLIENT_ID;
@@ -675,15 +1755,23 @@ async function runOauthLogin(args) {
 
 function runOauthList() {
   const tokenStore = loadTokenStore();
+  const clientConfig = loadClientConfig();
+  const auth = getAuthStatusSummary();
   const keys = Object.keys(tokenStore.profiles);
+  console.log(`[auth] ${auth.ready ? "ready" : "not_ready"} (${auth.mode})`);
+  console.log(`    ${auth.summary}`);
+
   if (keys.length === 0) {
     console.log(`[oauth] no saved profiles in ${TOKEN_STORE_PATH}`);
-    return;
+  } else {
+    console.log(`[oauth] profiles in ${TOKEN_STORE_PATH}`);
+    for (const key of keys) {
+      console.log(formatTokenProfileSummary(key, tokenStore.profiles[key], tokenStore.default_profile === key));
+    }
   }
 
-  console.log(`[oauth] profiles in ${TOKEN_STORE_PATH}`);
-  for (const key of keys) {
-    console.log(formatTokenProfileSummary(key, tokenStore.profiles[key], tokenStore.default_profile === key));
+  if (clientConfig.gateway_url || clientConfig.profile || clientConfig.gateway_api_key) {
+    console.log(formatClientConfigSummary(clientConfig));
   }
 }
 
@@ -708,11 +1796,24 @@ function runOauthUse(args) {
 function runOauthCurrent() {
   const tokenStore = loadTokenStore();
   const resolved = resolveTokenStoreProfileBySelector(tokenStore, process.env.SLACK_PROFILE);
-  if (!resolved) {
-    console.log("[oauth] no active profile");
+  const clientConfig = loadClientConfig();
+  const auth = getAuthStatusSummary();
+  console.log(`[auth] ${auth.ready ? "ready" : "not_ready"} (${auth.mode})`);
+  console.log(`    ${auth.summary}`);
+
+  if (resolved) {
+    console.log("");
+    console.log(formatTokenProfileSummary(resolved.key, resolved.profile, tokenStore.default_profile === resolved.key));
+  }
+  if (clientConfig.gateway_url || clientConfig.profile || clientConfig.gateway_api_key) {
+    if (resolved) console.log("");
+    console.log(formatClientConfigSummary(clientConfig));
     return;
   }
-  console.log(formatTokenProfileSummary(resolved.key, resolved.profile, tokenStore.default_profile === resolved.key));
+  if (!resolved) {
+    console.log("");
+    console.log("[oauth] no active profile");
+  }
 }
 
 async function runOauthCli(args) {
@@ -770,7 +1871,7 @@ function cleanupExpiredClaimSessions(claimSessions, stateToClaim) {
 }
 
 async function fetchJsonResponse(url, options, label) {
-  const response = await fetch(url, options);
+  const response = await fetchWithCompatTls(url, options, "onboard");
   const rawText = await response.text();
   let data;
   try {
@@ -791,13 +1892,15 @@ function printOnboardHelp() {
     "Usage:",
     "  slack-max-api-mcp onboard run",
     "  slack-max-api-mcp onboard run --server https://onboard.example.com",
+    "  slack-max-api-mcp onboard run --gateway https://gateway.example.com [--token <invite_token>]",
     "    [--profile NAME] [--team T123] [--scope a,b] [--user-scope c,d]",
     "  slack-max-api-mcp onboard help",
     "",
     "Notes:",
     `  - Default onboard server: ${ONBOARD_SERVER_URL}`,
     "  - This command does not require SLACK_CLIENT_SECRET on team PCs.",
-    "  - It opens browser OAuth via central onboarding server and saves tokens locally.",
+    "  - It supports both legacy claim-token onboarding and public gateway onboarding.",
+    "  - Gateway mode saves client.json locally so team PCs can use the central server without local Slack tokens.",
   ];
   console.log(lines.join("\n"));
 }
@@ -826,15 +1929,22 @@ function printOnboardServerHelp() {
 
 async function runOnboardClient(args) {
   const { options } = parseCliArgs(args);
-  const serverBase = String(options.server || ONBOARD_SERVER_URL).trim().replace(/\/+$/, "");
+  const serverBase = String(
+    options.gateway || options.url || options.server || ONBOARD_SERVER_URL
+  )
+    .trim()
+    .replace(/\/+$/, "");
   if (!serverBase) {
-    throw new Error("Missing onboard server URL. Use --server or set SLACK_ONBOARD_SERVER_URL.");
+    throw new Error(
+      "Missing onboard server URL. Use --server/--gateway or set SLACK_ONBOARD_SERVER_URL."
+    );
   }
 
-  const requestedProfile = String(options.profile || "").trim();
+  const requestedProfile = String(options.profile || "").trim() || createAutoOnboardProfileName("auto");
   const requestedTeam = String(options.team || "").trim();
   const requestedScope = parseScopeList(options.scope || "").join(",");
   const requestedUserScope = parseScopeList(options["user-scope"] || "").join(",");
+  const inviteToken = String(options.token || "").trim();
 
   const bootstrapParams = new URLSearchParams();
   if (requestedProfile) bootstrapParams.set("profile", requestedProfile);
@@ -842,12 +1952,61 @@ async function runOnboardClient(args) {
   if (requestedScope) bootstrapParams.set("scope", requestedScope);
   if (requestedUserScope) bootstrapParams.set("user_scope", requestedUserScope);
 
-  const bootstrapUrl = `${serverBase}/onboard/bootstrap${bootstrapParams.toString() ? `?${bootstrapParams.toString()}` : ""}`;
+  const bootstrapUrl = inviteToken
+    ? `${serverBase}/onboard/resolve?token=${encodeURIComponent(inviteToken)}`
+    : `${serverBase}/onboard/bootstrap${bootstrapParams.toString() ? `?${bootstrapParams.toString()}` : ""}`;
   const bootstrap = await fetchJsonResponse(
     bootstrapUrl,
     { method: "GET", headers: { Accept: "application/json" } },
     "Onboard bootstrap"
   );
+
+  const resolvedGatewayUrl = String(bootstrap.gateway_url || serverBase).replace(/\/+$/, "");
+  const resolvedGatewayApiKey = String(bootstrap.gateway_api_key || "");
+  const resolvedProfile = String(bootstrap.profile || requestedProfile || "");
+  const oauthStartUrl = String(bootstrap.oauth_start_url || "");
+  const isGatewayBootstrap =
+    Boolean(bootstrap.gateway_url) ||
+    Boolean(bootstrap.gateway_api_key) ||
+    Boolean(oauthStartUrl) ||
+    bootstrap.mode === "public_onboard" ||
+    bootstrap.mode === "invite_token";
+
+  if (isGatewayBootstrap) {
+    if (bootstrap.requires_gateway_api_key && !resolvedGatewayApiKey) {
+      throw new Error(
+        "Gateway requires API key but onboarding response did not provide one."
+      );
+    }
+
+    saveClientConfig({
+      version: 1,
+      gateway_url: resolvedGatewayUrl,
+      gateway_api_key: resolvedGatewayApiKey,
+      profile: resolvedProfile,
+      updated_at: new Date().toISOString(),
+    });
+
+    if (oauthStartUrl) {
+      const opened = openExternalUrl(oauthStartUrl);
+      if (!opened) {
+        console.log(`[onboard] Open this URL in browser:\n${oauthStartUrl}`);
+      } else {
+        console.log("[onboard] Browser opened for OAuth approval.");
+      }
+    }
+
+    console.log(`[onboard] client config saved: ${CLIENT_CONFIG_PATH}`);
+    console.log(`[onboard] gateway: ${resolvedGatewayUrl}`);
+    if (resolvedProfile) console.log(`[onboard] profile: ${resolvedProfile}`);
+    if (bootstrap.mode === "public_onboard") {
+      console.log("[onboard] mode: public_onboard (tokenless)");
+    } else if (bootstrap.mode === "invite_token") {
+      console.log("[onboard] mode: invite_token");
+    }
+    console.log("[onboard] Next: approve in browser, then use Codex MCP as usual.");
+    return;
+  }
 
   const startUrl = String(bootstrap.onboard_start_url || "");
   const claimToken = String(bootstrap.claim_token || "");
@@ -1217,6 +2376,19 @@ async function executeSlackHttpRequest({
   headers,
   token_override,
 }) {
+  const runtimeGateway = getRuntimeGatewayConfig();
+  if (runtimeGateway.url) {
+    return slackHttpViaGateway({
+      url,
+      http_method,
+      query,
+      json_body,
+      form_body,
+      headers,
+      token_override,
+    });
+  }
+
   const tokenCandidate = requireSlackTokenCandidate(token_override);
   const method = http_method || "GET";
 
@@ -1241,7 +2413,7 @@ async function executeSlackHttpRequest({
     body = JSON.stringify(json_body);
   }
 
-  const res = await fetch(endpoint.toString(), {
+  const res = await fetchWithCompatTls(endpoint.toString(), {
     method,
     headers: reqHeaders,
     body,
@@ -1408,6 +2580,13 @@ function registerSmartGatewayTools(server, catalog) {
           max_method_tools: MAX_METHOD_TOOLS,
           methods_in_catalog: Array.isArray(catalog?.methods) ? catalog.methods.length : 0,
           exposed_tools_hint: "smart mode keeps the tool surface compact via gateway_plan/load/run/info.",
+          method_policy: {
+            allowlist_count: METHOD_ALLOWLIST.size,
+            denylist_count: METHOD_DENYLIST.size,
+            allow_prefix_count: METHOD_ALLOW_PREFIXES.length,
+            deny_prefix_count: METHOD_DENY_PREFIXES.length,
+          },
+          audit_enabled: ENABLE_AUDIT_LOG,
         };
       })
   );
@@ -1838,6 +3017,1320 @@ function registerCoreTools(server) {
   return { registered: 12 };
 }
 
+function registerOperationsTools(server) {
+  function recordPlaybookExecution(state, payload) {
+    appendPlaybookRun(state, {
+      id: createOperationId("playbook"),
+      recorded_at: new Date().toISOString(),
+      ...payload,
+    });
+  }
+
+  async function createIncidentWorkflow(input, options = {}) {
+    const dryRun = input.dry_run !== false;
+    const announce = input.announce !== false;
+    const channelRef = input.channel || OPERATIONS_CONFIG.incidents.default_channel || "";
+    const incidentSeverity =
+      input.severity || OPERATIONS_CONFIG.incidents.default_severity || "sev2";
+    const incidentOwner = input.owner || OPERATIONS_CONFIG.incidents.default_owner || "TBD";
+    const nextUpdateTs = buildIncidentNextUpdateTs(input.next_update_minutes);
+    const resolvedChannel = channelRef
+      ? await resolveChannelReference(channelRef, input.token_override)
+      : null;
+
+    if (announce && !resolvedChannel) {
+      throw new Error(
+        "`channel` is required when announce is enabled and no default incident channel is configured."
+      );
+    }
+
+    const messageText = buildIncidentOpenText({
+      title: input.title,
+      severity: incidentSeverity,
+      owner: incidentOwner,
+      summary: input.summary,
+      details: input.details,
+      next_update_ts: nextUpdateTs,
+    });
+
+    if (dryRun) {
+      return {
+        operation: "incident_create",
+        dry_run: true,
+        target_channel: resolvedChannel,
+        message_preview: messageText,
+        incident_preview: {
+          title: input.title,
+          severity: incidentSeverity,
+          owner: incidentOwner,
+          status: "open",
+          next_update_ts: nextUpdateTs,
+        },
+      };
+    }
+
+    let posted = null;
+    if (announce && resolvedChannel) {
+      posted = await callSlackApi(
+        "chat.postMessage",
+        {
+          channel: resolvedChannel.id,
+          text: messageText,
+          mrkdwn: true,
+        },
+        input.token_override
+      );
+    }
+
+    const now = new Date().toISOString();
+    const incidentRecord = {
+      id: createOperationId("incident"),
+      title: input.title,
+      summary: input.summary || "No summary provided.",
+      details: input.details || "",
+      owner: incidentOwner,
+      severity: incidentSeverity,
+      status: "open",
+      channel: resolvedChannel
+        ? {
+            id: resolvedChannel.id,
+            name: resolvedChannel.name || null,
+            reference: resolvedChannel.reference || channelRef,
+          }
+        : null,
+      root_ts: posted?.ts || null,
+      next_update_ts: nextUpdateTs,
+      created_at: now,
+      updated_at: now,
+      source: options.source || "ops_incident_create",
+    };
+    appendRecordEvent(incidentRecord, {
+      type: "created",
+      summary: incidentRecord.summary,
+      source: options.source || "ops_incident_create",
+      posted_ts: posted?.ts || null,
+    });
+
+    mutateOperationsState((state) => {
+      upsertOperationRecord(state, "incidents", incidentRecord);
+      if (options.playbook) {
+        recordPlaybookExecution(state, {
+          playbook: options.playbook,
+          dry_run: false,
+          collection: "incidents",
+          record_id: incidentRecord.id,
+        });
+      }
+    });
+
+    return {
+      operation: "incident_create",
+      dry_run: false,
+      target_channel: resolvedChannel,
+      channel: posted?.channel || resolvedChannel?.id || null,
+      ts: posted?.ts || null,
+      incident: incidentRecord,
+    };
+  }
+
+  async function generateSupportDigestWorkflow(input, options = {}) {
+    const channelRefs =
+      Array.isArray(input.channels) && input.channels.length > 0
+        ? input.channels
+        : input.channel
+        ? [input.channel]
+        : [];
+    if (channelRefs.length === 0) {
+      throw new Error("`channels` (or `channel`) is required for support_digest.");
+    }
+
+    const resolvedChannels = await resolveChannelReferences(channelRefs, input.token_override);
+    const lookbackHours =
+      input.lookback_hours ?? OPERATIONS_CONFIG.support_digest.default_lookback_hours ?? 24;
+    const slaMinutes =
+      input.sla_minutes ?? OPERATIONS_CONFIG.support_digest.default_sla_minutes ?? 60;
+    const perChannelMaxThreads =
+      input.max_threads ?? OPERATIONS_CONFIG.support_digest.default_max_threads ?? 10;
+    const digestItems = [];
+
+    for (const resolved of resolvedChannels) {
+      const oldest = String(Math.floor(Date.now() / 1000 - lookbackHours * 3600));
+      const history = await callSlackApi(
+        "conversations.history",
+        {
+          channel: resolved.id,
+          oldest,
+          inclusive: true,
+          limit: 200,
+        },
+        input.token_override
+      );
+      const messages = Array.isArray(history?.messages) ? history.messages : [];
+      const snapshot = summarizeChannelMessages(messages, {
+        participantLimit: 3,
+        sampleSize: 3,
+      });
+      const unanswered = await findUnansweredThreadsInChannel({
+        channel: resolved.id,
+        lookbackHours,
+        minAgeMinutes: slaMinutes,
+        maxThreads: perChannelMaxThreads,
+        includeBotReplies: false,
+        tokenOverride: input.token_override,
+      });
+
+      digestItems.push({
+        channel: resolved.id,
+        channel_name: resolved.name || null,
+        channel_reference: resolved.reference || resolved.id,
+        message_count: snapshot.message_count,
+        unique_user_count: snapshot.unique_user_count,
+        unanswered_count: unanswered.unanswered_count,
+        top_participants: snapshot.top_participants,
+      });
+    }
+
+    const digestText = buildSupportDigestText(digestItems, lookbackHours, slaMinutes);
+    const dryRun = input.dry_run !== false;
+
+    if (dryRun || !input.report_channel) {
+      return {
+        operation: "support_digest",
+        dry_run: true,
+        lookback_hours: lookbackHours,
+        sla_minutes: slaMinutes,
+        digest_items: digestItems,
+        digest_preview: digestText,
+        note: input.report_channel
+          ? "Set dry_run=false to post this digest."
+          : "Provide report_channel and set dry_run=false to post this digest.",
+      };
+    }
+
+    const reportTarget = await resolveChannelReference(input.report_channel, input.token_override);
+    const posted = await callSlackApi(
+      "chat.postMessage",
+      {
+        channel: reportTarget.id,
+        text: digestText,
+        mrkdwn: true,
+      },
+      input.token_override
+    );
+
+    const now = new Date().toISOString();
+    const digestRecord = {
+      id: createOperationId("digest"),
+      status: "posted",
+      channels: resolvedChannels.map((item) => ({
+        id: item.id,
+        name: item.name || null,
+        reference: item.reference || item.id,
+      })),
+      report_channel: {
+        id: reportTarget.id,
+        name: reportTarget.name || null,
+        reference: reportTarget.reference || input.report_channel,
+      },
+      lookback_hours: lookbackHours,
+      sla_minutes: slaMinutes,
+      digest_items: digestItems,
+      digest_text: digestText,
+      posted_ts: posted?.ts || null,
+      created_at: now,
+      updated_at: now,
+      source: options.source || "ops_playbook_run",
+    };
+
+    mutateOperationsState((state) => {
+      upsertOperationRecord(state, "digests", digestRecord);
+      if (options.playbook) {
+        recordPlaybookExecution(state, {
+          playbook: options.playbook,
+          dry_run: false,
+          collection: "digests",
+          record_id: digestRecord.id,
+        });
+      }
+    });
+
+    return {
+      operation: "support_digest",
+      dry_run: false,
+      report_channel: reportTarget,
+      ts: posted?.ts || null,
+      digest: digestRecord,
+    };
+  }
+
+  async function prepareBroadcastDraftWorkflow(input) {
+    const deferredChannels = buildDeferredChannelTargets(input.channels);
+    if (deferredChannels.length === 0) {
+      throw new Error("At least one channel reference is required.");
+    }
+    const text = buildBroadcastText(input).trim();
+    if (!text) {
+      throw new Error("Provide `text` or enough template fields to build a broadcast message.");
+    }
+
+    const now = new Date().toISOString();
+    const draftRecord = {
+      id: createOperationId("broadcast"),
+      title: input.title || null,
+      summary: input.summary || null,
+      details: input.details || null,
+      template_id: input.template_id || OPERATIONS_CONFIG.broadcasts.default_template || null,
+      text,
+      mrkdwn: input.mrkdwn ?? OPERATIONS_CONFIG.broadcasts.default_mrkdwn ?? true,
+      status: "draft",
+      channel_targets: deferredChannels,
+      created_at: now,
+      updated_at: now,
+      source: "ops_broadcast_prepare",
+    };
+    appendRecordEvent(draftRecord, { type: "prepared" });
+
+    mutateOperationsState((state) => {
+      upsertOperationRecord(state, "broadcasts", draftRecord);
+    });
+
+    return {
+      broadcast: draftRecord,
+      payload_preview: {
+        text: truncateText(text, 500),
+        mrkdwn: draftRecord.mrkdwn,
+      },
+    };
+  }
+
+  async function sendBroadcastWorkflow(input, options = {}) {
+    const dryRun = input.dry_run !== false;
+    let existingRecord = null;
+    let resolvedChannels = [];
+    let text = "";
+    let title = input.title || null;
+    let summary = input.summary || null;
+    let details = input.details || null;
+    let templateId = input.template_id || OPERATIONS_CONFIG.broadcasts.default_template || null;
+    let defaultMrkdwn = input.mrkdwn;
+
+    if (input.broadcast_id) {
+      const state = loadOperationsState();
+      existingRecord = getOperationRecord(state, "broadcasts", input.broadcast_id);
+      if (!existingRecord) {
+        throw new Error(`Broadcast draft not found: ${input.broadcast_id}`);
+      }
+      resolvedChannels = Array.isArray(existingRecord.channel_targets)
+        ? existingRecord.channel_targets
+        : [];
+      text = existingRecord.text || "";
+      title = title || existingRecord.title || null;
+      summary = summary || existingRecord.summary || null;
+      details = details || existingRecord.details || null;
+      templateId = templateId || existingRecord.template_id || null;
+      defaultMrkdwn =
+        input.mrkdwn ?? existingRecord.mrkdwn ?? OPERATIONS_CONFIG.broadcasts.default_mrkdwn ?? true;
+    } else {
+      if (!Array.isArray(input.channels) || input.channels.length === 0) {
+        throw new Error("`channels` is required when broadcast_id is not provided.");
+      }
+      resolvedChannels = buildDeferredChannelTargets(input.channels);
+      text = buildBroadcastText(input).trim();
+      defaultMrkdwn = input.mrkdwn ?? OPERATIONS_CONFIG.broadcasts.default_mrkdwn ?? true;
+    }
+
+    if (!text) {
+      throw new Error("Provide `text` or enough template fields to build a broadcast message.");
+    }
+
+    const payload = {
+      text,
+      blocks: parseJsonMaybe(input.blocks),
+      mrkdwn: defaultMrkdwn,
+      unfurl_links: input.unfurl_links,
+      unfurl_media: input.unfurl_media,
+    };
+
+    if (dryRun) {
+      return {
+        dry_run: true,
+        broadcast_id: existingRecord?.id || null,
+        channel_count: resolvedChannels.length,
+        channels: resolvedChannels,
+        payload_preview: {
+          ...payload,
+          text: truncateText(text, 500),
+        },
+      };
+    }
+
+    const targetReferences = extractChannelTargetReferences(resolvedChannels);
+    if (targetReferences.length === 0) {
+      throw new Error("At least one channel reference is required to send a broadcast.");
+    }
+
+    resolvedChannels = await resolveChannelReferences(targetReferences, input.token_override);
+
+    const results = [];
+    for (const channel of resolvedChannels) {
+      try {
+        const data = await callSlackApi(
+          "chat.postMessage",
+          {
+            channel: channel.id,
+            ...payload,
+          },
+          input.token_override
+        );
+        results.push({
+          channel: channel.id,
+          channel_name: channel.name || null,
+          ok: true,
+          ts: data?.ts || null,
+        });
+      } catch (error) {
+        results.push({
+          channel: channel.id,
+          channel_name: channel.name || null,
+          ok: false,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+    }
+
+    const successCount = results.filter((item) => item.ok).length;
+    const now = new Date().toISOString();
+    const broadcastRecord = {
+      id: existingRecord?.id || createOperationId("broadcast"),
+      title,
+      summary,
+      details,
+      template_id: templateId,
+      text,
+      mrkdwn: payload.mrkdwn,
+      status: successCount === resolvedChannels.length ? "sent" : "partial",
+      channel_targets: resolvedChannels.map((item) => ({
+        id: item.id,
+        name: item.name || null,
+        reference: item.reference || item.id,
+      })),
+      created_at: existingRecord?.created_at || now,
+      updated_at: now,
+      sent_at: now,
+      results,
+      source: options.source || existingRecord?.source || "ops_broadcast_message",
+    };
+    appendRecordEvent(broadcastRecord, {
+      type: "sent",
+      success_count: successCount,
+      failed_count: resolvedChannels.length - successCount,
+    });
+
+    mutateOperationsState((state) => {
+      upsertOperationRecord(state, "broadcasts", broadcastRecord);
+      if (options.playbook) {
+        recordPlaybookExecution(state, {
+          playbook: options.playbook,
+          dry_run: false,
+          collection: "broadcasts",
+          record_id: broadcastRecord.id,
+        });
+      }
+    });
+
+    return {
+      dry_run: false,
+      broadcast: broadcastRecord,
+      channel_count: resolvedChannels.length,
+      success_count: successCount,
+      failed_count: resolvedChannels.length - successCount,
+      results,
+    };
+  }
+
+  server.registerTool(
+    "ops_policy_info",
+    {
+      description:
+        "Show operational guardrails for this MCP (method policy and local audit settings).",
+      inputSchema: {},
+    },
+    async () =>
+      safeToolRun(async () => ({
+        execution_mode: "local_stdio",
+        tool_exposure_mode: TOOL_EXPOSURE_MODE,
+        tool_surface: {
+          gateway_tools_exposed: EXPOSE_GATEWAY_TOOLS,
+          raw_core_tools_exposed: EXPOSE_CORE_TOOLS,
+          method_tools_enabled: ENABLE_METHOD_TOOLS,
+        },
+        method_policy: {
+          allowlist: [...METHOD_ALLOWLIST.values()],
+          denylist: [...METHOD_DENYLIST.values()],
+          allow_prefixes: METHOD_ALLOW_PREFIXES,
+          deny_prefixes: METHOD_DENY_PREFIXES,
+        },
+        audit: {
+          enabled: ENABLE_AUDIT_LOG,
+          path: AUDIT_LOG_PATH,
+          note: "Audit entries are written as JSONL and avoid token values.",
+        },
+        operations: {
+          config_path: OPERATIONS_CONFIG_PATH,
+          state_path: OPERATIONS_STATE_PATH,
+          summary: buildOperationsStateSummary(loadOperationsState()),
+        },
+        playbooks: OPS_PLAYBOOKS,
+      }))
+  );
+
+  server.registerTool(
+    "ops_playbook_list",
+    {
+      description: "List built-in operations playbooks that can run multi-step Slack workflows.",
+      inputSchema: {},
+    },
+    async () =>
+      safeToolRun(async () => ({
+        count: OPS_PLAYBOOKS.length,
+        playbooks: OPS_PLAYBOOKS,
+      }))
+  );
+
+  server.registerTool(
+    "ops_state_overview",
+    {
+      description:
+        "Inspect local operations state for incidents, digests, broadcasts, followups, and playbook runs.",
+      inputSchema: {
+        collection: z
+          .enum(["summary", "incidents", "digests", "broadcasts", "followups", "playbook_runs"])
+          .optional(),
+        status: z.string().optional(),
+        limit: z.number().int().min(1).max(200).optional(),
+      },
+    },
+    async ({ collection, status, limit }) =>
+      safeToolRun(async () => {
+        const state = loadOperationsState();
+        const targetCollection = collection || "summary";
+
+        if (targetCollection === "summary") {
+          return {
+            config_path: OPERATIONS_CONFIG_PATH,
+            state_path: OPERATIONS_STATE_PATH,
+            summary: buildOperationsStateSummary(state),
+            recent_incidents: listOperationRecords(state.incidents, { limit: 5 }),
+            recent_broadcasts: listOperationRecords(state.broadcasts, { limit: 5 }),
+            recent_digests: listOperationRecords(state.digests, { limit: 5 }),
+          };
+        }
+
+        if (targetCollection === "playbook_runs") {
+          const records = Array.isArray(state.playbook_runs) ? state.playbook_runs : [];
+          return {
+            collection: targetCollection,
+            count: records.length,
+            records: records.slice(-(limit ?? 20)).reverse(),
+          };
+        }
+
+        return {
+          collection: targetCollection,
+          count: Object.keys(normalizeObjectMap(state[targetCollection])).length,
+          records: listOperationRecords(state[targetCollection], {
+            status,
+            limit: limit ?? 20,
+          }),
+        };
+      })
+  );
+
+  server.registerTool(
+    "ops_incident_create",
+    {
+      description:
+        "Create and optionally announce a tracked incident record using config-backed incident templates.",
+      inputSchema: {
+        channel: z.string().optional(),
+        title: z.string().min(1),
+        summary: z.string().optional(),
+        details: z.string().optional(),
+        owner: z.string().optional(),
+        severity: z.enum(["sev1", "sev2", "sev3", "sev4"]).optional(),
+        next_update_minutes: z.number().int().min(1).max(1440).optional(),
+        announce: z.boolean().optional(),
+        dry_run: z.boolean().optional(),
+        token_override: z.string().optional(),
+      },
+    },
+    async (input) =>
+      safeToolRun(async () => createIncidentWorkflow(input, { source: "ops_incident_create" }))
+  );
+
+  server.registerTool(
+    "ops_incident_update",
+    {
+      description:
+        "Update a tracked incident, optionally post a thread update, and persist the new operational status.",
+      inputSchema: {
+        incident_id: z.string().min(1),
+        status: z
+          .enum(["open", "investigating", "identified", "mitigating", "monitoring"])
+          .optional(),
+        summary: z.string().optional(),
+        details: z.string().optional(),
+        owner: z.string().optional(),
+        severity: z.enum(["sev1", "sev2", "sev3", "sev4"]).optional(),
+        next_update_minutes: z.number().int().min(1).max(1440).optional(),
+        post_update: z.boolean().optional(),
+        dry_run: z.boolean().optional(),
+        token_override: z.string().optional(),
+      },
+    },
+    async ({
+      incident_id,
+      status,
+      summary,
+      details,
+      owner,
+      severity,
+      next_update_minutes,
+      post_update,
+      dry_run,
+      token_override,
+    }) =>
+      safeToolRun(async () => {
+        const state = loadOperationsState();
+        const existing = getOperationRecord(state, "incidents", incident_id);
+        if (!existing) {
+          throw new Error(`Incident not found: ${incident_id}`);
+        }
+
+        const nextIncident = {
+          ...existing,
+          status: status || existing.status || "open",
+          summary: summary || existing.summary || "No summary provided.",
+          details: details !== undefined ? details : existing.details || "",
+          owner: owner || existing.owner || OPERATIONS_CONFIG.incidents.default_owner || "TBD",
+          severity:
+            severity || existing.severity || OPERATIONS_CONFIG.incidents.default_severity || "sev2",
+          next_update_ts:
+            next_update_minutes !== undefined
+              ? buildIncidentNextUpdateTs(next_update_minutes)
+              : existing.next_update_ts || buildIncidentNextUpdateTs(),
+        };
+
+        const messageText = buildIncidentUpdateText({
+          title: existing.title,
+          severity: nextIncident.severity,
+          owner: nextIncident.owner,
+          summary: nextIncident.summary,
+          details: nextIncident.details,
+          status: nextIncident.status,
+          next_update_ts: nextIncident.next_update_ts,
+        });
+
+        if (dry_run !== false) {
+          return {
+            operation: "incident_update",
+            dry_run: true,
+            incident_id,
+            target_channel: existing.channel || null,
+            message_preview: messageText,
+            incident_preview: nextIncident,
+          };
+        }
+
+        let posted = null;
+        if (post_update !== false && existing.channel?.id) {
+          posted = await callSlackApi(
+            "chat.postMessage",
+            {
+              channel: existing.channel.id,
+              thread_ts: existing.root_ts || undefined,
+              text: messageText,
+              mrkdwn: true,
+            },
+            token_override
+          );
+        }
+
+        const updatedAt = new Date().toISOString();
+        const updatedIncident = {
+          ...existing,
+          ...nextIncident,
+          updated_at: updatedAt,
+        };
+        appendRecordEvent(updatedIncident, {
+          type: "updated",
+          status: updatedIncident.status,
+          summary: updatedIncident.summary,
+          posted_ts: posted?.ts || null,
+        });
+
+        mutateOperationsState((mutableState) => {
+          upsertOperationRecord(mutableState, "incidents", updatedIncident);
+        });
+
+        return {
+          operation: "incident_update",
+          dry_run: false,
+          ts: posted?.ts || null,
+          incident: updatedIncident,
+        };
+      })
+  );
+
+  server.registerTool(
+    "ops_incident_close",
+    {
+      description:
+        "Close a tracked incident, optionally post a closure update, and persist the final resolution.",
+      inputSchema: {
+        incident_id: z.string().min(1),
+        resolution: z.string().optional(),
+        details: z.string().optional(),
+        owner: z.string().optional(),
+        post_update: z.boolean().optional(),
+        dry_run: z.boolean().optional(),
+        token_override: z.string().optional(),
+      },
+    },
+    async ({ incident_id, resolution, details, owner, post_update, dry_run, token_override }) =>
+      safeToolRun(async () => {
+        const state = loadOperationsState();
+        const existing = getOperationRecord(state, "incidents", incident_id);
+        if (!existing) {
+          throw new Error(`Incident not found: ${incident_id}`);
+        }
+
+        const nextIncident = {
+          ...existing,
+          status: "closed",
+          owner: owner || existing.owner || OPERATIONS_CONFIG.incidents.default_owner || "TBD",
+          details: details !== undefined ? details : existing.details || "",
+          resolution: resolution || "Resolved",
+          next_update_ts: null,
+        };
+
+        const messageText = buildIncidentCloseText({
+          title: existing.title,
+          severity: nextIncident.severity,
+          owner: nextIncident.owner,
+          details: nextIncident.details,
+          resolution: nextIncident.resolution,
+          status: "closed",
+        });
+
+        if (dry_run !== false) {
+          return {
+            operation: "incident_close",
+            dry_run: true,
+            incident_id,
+            target_channel: existing.channel || null,
+            message_preview: messageText,
+            incident_preview: nextIncident,
+          };
+        }
+
+        let posted = null;
+        if (post_update !== false && existing.channel?.id) {
+          posted = await callSlackApi(
+            "chat.postMessage",
+            {
+              channel: existing.channel.id,
+              thread_ts: existing.root_ts || undefined,
+              text: messageText,
+              mrkdwn: true,
+            },
+            token_override
+          );
+        }
+
+        const updatedAt = new Date().toISOString();
+        const closedIncident = {
+          ...nextIncident,
+          closed_at: updatedAt,
+          updated_at: updatedAt,
+        };
+        appendRecordEvent(closedIncident, {
+          type: "closed",
+          resolution: closedIncident.resolution,
+          posted_ts: posted?.ts || null,
+        });
+
+        mutateOperationsState((mutableState) => {
+          upsertOperationRecord(mutableState, "incidents", closedIncident);
+        });
+
+        return {
+          operation: "incident_close",
+          dry_run: false,
+          ts: posted?.ts || null,
+          incident: closedIncident,
+        };
+      })
+  );
+
+  server.registerTool(
+    "ops_broadcast_prepare",
+    {
+      description:
+        "Create a tracked broadcast draft before sending it to one or more channels.",
+      inputSchema: {
+        channels: z.array(z.string().min(1)).min(1).max(20),
+        text: z.string().optional(),
+        title: z.string().optional(),
+        summary: z.string().optional(),
+        details: z.string().optional(),
+        template_id: z.string().optional(),
+        mrkdwn: z.boolean().optional(),
+        token_override: z.string().optional(),
+      },
+    },
+    async (input) => safeToolRun(async () => prepareBroadcastDraftWorkflow(input))
+  );
+
+  server.registerTool(
+    "ops_playbook_run",
+    {
+      description:
+        "Run a named operations playbook (incident open, support digest, release broadcast) with config-backed defaults and state persistence.",
+      inputSchema: {
+        playbook: z.enum(["incident_open", "support_digest", "release_broadcast"]),
+        channel: z.string().optional(),
+        channels: z.array(z.string().min(1)).max(20).optional(),
+        report_channel: z.string().optional(),
+        title: z.string().optional(),
+        summary: z.string().optional(),
+        details: z.string().optional(),
+        owner: z.string().optional(),
+        severity: z.enum(["sev1", "sev2", "sev3", "sev4"]).optional(),
+        lookback_hours: z.number().int().min(1).max(168).optional(),
+        sla_minutes: z.number().int().min(1).max(10080).optional(),
+        max_threads: z.number().int().min(1).max(50).optional(),
+        next_update_minutes: z.number().int().min(1).max(1440).optional(),
+        dry_run: z.boolean().optional(),
+        token_override: z.string().optional(),
+      },
+    },
+    async ({
+      playbook,
+      channel,
+      channels,
+      report_channel,
+      title,
+      summary,
+      details,
+      owner,
+      severity,
+      lookback_hours,
+      sla_minutes,
+      max_threads,
+      next_update_minutes,
+      dry_run,
+      token_override,
+    }) =>
+      safeToolRun(async () => {
+        if (playbook === "incident_open") {
+          if (!title) throw new Error("`title` is required for incident_open.");
+          return createIncidentWorkflow(
+            {
+              channel,
+              title,
+              summary,
+              details,
+              owner,
+              severity,
+              next_update_minutes,
+              dry_run,
+              token_override,
+            },
+            { source: "ops_playbook_run", playbook }
+          );
+        }
+
+        if (playbook === "support_digest") {
+          return generateSupportDigestWorkflow(
+            {
+              channel,
+              channels,
+              report_channel,
+              lookback_hours,
+              sla_minutes,
+              max_threads,
+              dry_run,
+              token_override,
+            },
+            { source: "ops_playbook_run", playbook }
+          );
+        }
+
+        if (!title) throw new Error("`title` is required for release_broadcast.");
+        if (!summary) throw new Error("`summary` is required for release_broadcast.");
+
+        return sendBroadcastWorkflow(
+          {
+            channels:
+              Array.isArray(channels) && channels.length > 0 ? channels : channel ? [channel] : [],
+            title,
+            summary,
+            details,
+            template_id: "release_default",
+            dry_run,
+            token_override,
+          },
+          { source: "ops_playbook_run", playbook }
+        );
+      })
+  );
+
+  server.registerTool(
+    "ops_channel_snapshot",
+    {
+      description:
+        "Operational snapshot for a channel: activity volume, participants, threads, reactions, and recent samples.",
+      inputSchema: {
+        channel: z.string().min(1),
+        lookback_hours: z.number().int().min(1).max(168).optional(),
+        limit: z.number().int().min(1).max(1000).optional(),
+        participant_limit: z.number().int().min(1).max(20).optional(),
+        sample_size: z.number().int().min(1).max(20).optional(),
+        token_override: z.string().optional(),
+      },
+    },
+    async ({
+      channel,
+      lookback_hours,
+      limit,
+      participant_limit,
+      sample_size,
+      token_override,
+    }) =>
+      safeToolRun(async () => {
+        const resolvedChannel = await resolveChannelReference(channel, token_override);
+        const lookbackHours = lookback_hours ?? 24;
+        const oldest = String(Math.floor(Date.now() / 1000 - lookbackHours * 3600));
+        const history = await callSlackApi(
+          "conversations.history",
+          {
+            channel: resolvedChannel.id,
+            oldest,
+            inclusive: true,
+            limit: limit ?? 200,
+          },
+          token_override
+        );
+
+        const messages = Array.isArray(history?.messages) ? history.messages : [];
+        const summary = summarizeChannelMessages(messages, {
+          participantLimit: participant_limit ?? 5,
+          sampleSize: sample_size ?? 5,
+        });
+
+        return {
+          channel: resolvedChannel.id,
+          channel_name: resolvedChannel.name || null,
+          channel_reference: resolvedChannel.reference || channel,
+          lookback_hours: lookbackHours,
+          has_more: Boolean(history?.has_more),
+          next_cursor: history?.response_metadata?.next_cursor || null,
+          ...summary,
+        };
+      })
+  );
+
+  server.registerTool(
+    "ops_unanswered_threads",
+    {
+      description:
+        "Find unanswered or stale question-like threads in a channel for follow-up operations.",
+      inputSchema: {
+        channel: z.string().min(1),
+        lookback_hours: z.number().int().min(1).max(168).optional(),
+        min_age_minutes: z.number().int().min(1).max(10080).optional(),
+        max_threads: z.number().int().min(1).max(50).optional(),
+        include_bot_replies: z.boolean().optional(),
+        token_override: z.string().optional(),
+      },
+    },
+    async ({
+      channel,
+      lookback_hours,
+      min_age_minutes,
+      max_threads,
+      include_bot_replies,
+      token_override,
+    }) =>
+      safeToolRun(async () => {
+        const resolvedChannel = await resolveChannelReference(channel, token_override);
+        const result = await findUnansweredThreadsInChannel({
+          channel: resolvedChannel.id,
+          lookbackHours: lookback_hours ?? 24,
+          minAgeMinutes: min_age_minutes ?? 30,
+          maxThreads: max_threads ?? 20,
+          includeBotReplies: include_bot_replies === true,
+          tokenOverride: token_override,
+        });
+
+        return {
+          ...result,
+          channel_name: resolvedChannel.name || null,
+          channel_reference: resolvedChannel.reference || channel,
+        };
+      })
+  );
+
+  server.registerTool(
+    "ops_sla_breach_scan",
+    {
+      description:
+        "Scan multiple channels for threads that exceed an SLA threshold without external replies.",
+      inputSchema: {
+        channels: z.array(z.string().min(1)).min(1).max(20),
+        sla_minutes: z.number().int().min(1).max(10080).optional(),
+        lookback_hours: z.number().int().min(1).max(168).optional(),
+        max_threads_per_channel: z.number().int().min(1).max(100).optional(),
+        include_bot_replies: z.boolean().optional(),
+        token_override: z.string().optional(),
+      },
+    },
+    async ({
+      channels,
+      sla_minutes,
+      lookback_hours,
+      max_threads_per_channel,
+      include_bot_replies,
+      token_override,
+    }) =>
+      safeToolRun(async () => {
+        const resolvedChannels = await resolveChannelReferences(channels, token_override);
+        const slaMinutes = sla_minutes ?? 60;
+        const lookbackHours = lookback_hours ?? 24;
+        const maxThreadsPerChannel = max_threads_per_channel ?? 20;
+        const channelSummaries = [];
+        const breaches = [];
+
+        for (const resolved of resolvedChannels) {
+          const result = await findUnansweredThreadsInChannel({
+            channel: resolved.id,
+            lookbackHours,
+            minAgeMinutes: slaMinutes,
+            maxThreads: maxThreadsPerChannel,
+            includeBotReplies: include_bot_replies === true,
+            tokenOverride: token_override,
+          });
+
+          channelSummaries.push({
+            channel: resolved.id,
+            channel_name: resolved.name || null,
+            scanned_candidates: result.scanned_candidates,
+            unanswered_count: result.unanswered_count,
+          });
+
+          for (const thread of result.unanswered_threads) {
+            breaches.push({
+              ...thread,
+              channel_name: resolved.name || null,
+              channel_reference: resolved.reference || resolved.id,
+            });
+          }
+        }
+
+        breaches.sort((a, b) => Number(b.age_minutes || 0) - Number(a.age_minutes || 0));
+
+        return {
+          channels_scanned: resolvedChannels.length,
+          lookback_hours: lookbackHours,
+          sla_minutes: slaMinutes,
+          total_breach_count: breaches.length,
+          channel_summaries: channelSummaries,
+          breaches,
+        };
+      })
+  );
+
+  server.registerTool(
+    "ops_sla_followup",
+    {
+      description:
+        "Post reminder replies to SLA-breached threads across channels (supports dry-run).",
+      inputSchema: {
+        channels: z.array(z.string().min(1)).min(1).max(20),
+        sla_minutes: z.number().int().min(1).max(10080).optional(),
+        lookback_hours: z.number().int().min(1).max(168).optional(),
+        max_threads_per_channel: z.number().int().min(1).max(100).optional(),
+        max_messages: z.number().int().min(1).max(200).optional(),
+        include_bot_replies: z.boolean().optional(),
+        reminder_text: z.string().optional(),
+        dry_run: z.boolean().optional(),
+        token_override: z.string().optional(),
+      },
+    },
+    async ({
+      channels,
+      sla_minutes,
+      lookback_hours,
+      max_threads_per_channel,
+      max_messages,
+      include_bot_replies,
+      reminder_text,
+      dry_run,
+      token_override,
+    }) =>
+      safeToolRun(async () => {
+        const resolvedChannels = await resolveChannelReferences(channels, token_override);
+        const slaMinutes =
+          sla_minutes ?? OPERATIONS_CONFIG.followups.default_sla_minutes ?? 60;
+        const lookbackHours =
+          lookback_hours ?? OPERATIONS_CONFIG.followups.default_lookback_hours ?? 24;
+        const maxThreadsPerChannel =
+          max_threads_per_channel ??
+          OPERATIONS_CONFIG.followups.default_max_threads_per_channel ??
+          20;
+        const maxMessages =
+          max_messages ?? OPERATIONS_CONFIG.followups.default_max_messages ?? 30;
+        const dryRun = dry_run !== false;
+        const suppressHours = Math.max(
+          1,
+          Number(OPERATIONS_CONFIG.followups.suppress_hours || 6)
+        );
+        const defaultReminder =
+          reminder_text ||
+          renderTemplateText(
+            OPERATIONS_CONFIG.followups.reminder_template,
+            { sla_minutes: slaMinutes },
+            "\n"
+          );
+
+        const breaches = [];
+        for (const resolved of resolvedChannels) {
+          const result = await findUnansweredThreadsInChannel({
+            channel: resolved.id,
+            lookbackHours,
+            minAgeMinutes: slaMinutes,
+            maxThreads: maxThreadsPerChannel,
+            includeBotReplies: include_bot_replies === true,
+            tokenOverride: token_override,
+          });
+
+          for (const thread of result.unanswered_threads) {
+            breaches.push({
+              ...thread,
+              channel_name: resolved.name || null,
+              channel_reference: resolved.reference || resolved.id,
+            });
+          }
+        }
+
+        breaches.sort((a, b) => Number(b.age_minutes || 0) - Number(a.age_minutes || 0));
+        const state = loadOperationsState();
+        const recentCutoff = Date.now() - suppressHours * 60 * 60 * 1000;
+        const suppressedTargets = [];
+        const eligibleTargets = [];
+
+        for (const breach of breaches) {
+          const recordKey = buildFollowupStateKey(breach.channel, breach.thread_ts);
+          const existing = getOperationRecord(state, "followups", recordKey);
+          const lastRemindedAt = existing?.last_reminded_at
+            ? Date.parse(existing.last_reminded_at)
+            : NaN;
+          if (Number.isFinite(lastRemindedAt) && lastRemindedAt >= recentCutoff) {
+            suppressedTargets.push({
+              ...breach,
+              last_reminded_at: existing.last_reminded_at,
+              reminder_count: existing.reminder_count || 0,
+            });
+            continue;
+          }
+          eligibleTargets.push(breach);
+        }
+
+        const targets = eligibleTargets.slice(0, maxMessages);
+
+        if (dryRun) {
+          return {
+            dry_run: true,
+            lookback_hours: lookbackHours,
+            sla_minutes: slaMinutes,
+            total_breach_count: breaches.length,
+            suppressed_due_to_recent_followup: suppressedTargets.length,
+            max_messages,
+            planned_messages: targets.length,
+            reminder_preview: defaultReminder,
+            targets,
+            suppressed_targets: suppressedTargets,
+          };
+        }
+
+        const campaignId = createOperationId("followup");
+        const results = [];
+        for (const target of targets) {
+          try {
+            const data = await callSlackApi(
+              "chat.postMessage",
+              {
+                channel: target.channel,
+                thread_ts: target.thread_ts,
+                text: defaultReminder,
+                mrkdwn: true,
+              },
+              token_override
+            );
+            results.push({
+              channel: target.channel,
+              channel_name: target.channel_name || null,
+              thread_ts: target.thread_ts,
+              ok: true,
+              ts: data?.ts || null,
+            });
+          } catch (error) {
+            results.push({
+              channel: target.channel,
+              channel_name: target.channel_name || null,
+              thread_ts: target.thread_ts,
+              ok: false,
+              error: error instanceof Error ? error.message : String(error),
+            });
+          }
+        }
+
+        const successCount = results.filter((item) => item.ok).length;
+        const now = new Date().toISOString();
+        mutateOperationsState((mutableState) => {
+          for (const target of targets) {
+            const result = results.find(
+              (item) => item.channel === target.channel && item.thread_ts === target.thread_ts
+            );
+            if (!result?.ok) continue;
+            const recordKey = buildFollowupStateKey(target.channel, target.thread_ts);
+            const existing = getOperationRecord(mutableState, "followups", recordKey) || {
+              id: recordKey,
+              channel: target.channel,
+              thread_ts: target.thread_ts,
+              created_at: now,
+            };
+            const nextRecord = {
+              ...existing,
+              id: recordKey,
+              channel: target.channel,
+              channel_name: target.channel_name || null,
+              channel_reference: target.channel_reference || target.channel,
+              thread_ts: target.thread_ts,
+              root_text: target.root_text || existing.root_text || "",
+              status: "active",
+              reminder_count: Number(existing.reminder_count || 0) + 1,
+              last_text: defaultReminder,
+              last_campaign_id: campaignId,
+              last_reminded_at: now,
+              updated_at: now,
+            };
+            upsertOperationRecord(mutableState, "followups", nextRecord);
+          }
+        });
+
+        return {
+          dry_run: false,
+          lookback_hours: lookbackHours,
+          sla_minutes: slaMinutes,
+          total_breach_count: breaches.length,
+          suppressed_due_to_recent_followup: suppressedTargets.length,
+          attempted_messages: targets.length,
+          success_count: successCount,
+          failed_count: targets.length - successCount,
+          campaign_id: campaignId,
+          results,
+        };
+      })
+  );
+
+  server.registerTool(
+    "ops_broadcast_message",
+    {
+      description:
+        "Broadcast the same operational message to multiple channels, or send a prepared broadcast draft.",
+      inputSchema: {
+        broadcast_id: z.string().optional(),
+        channels: z.array(z.string().min(1)).min(1).max(20).optional(),
+        text: z.string().optional(),
+        title: z.string().optional(),
+        summary: z.string().optional(),
+        details: z.string().optional(),
+        template_id: z.string().optional(),
+        blocks: z.any().optional(),
+        mrkdwn: z.boolean().optional(),
+        unfurl_links: z.boolean().optional(),
+        unfurl_media: z.boolean().optional(),
+        dry_run: z.boolean().optional(),
+        token_override: z.string().optional(),
+      },
+    },
+    async ({
+      broadcast_id,
+      channels,
+      text,
+      title,
+      summary,
+      details,
+      template_id,
+      blocks,
+      mrkdwn,
+      unfurl_links,
+      unfurl_media,
+      dry_run,
+      token_override,
+    }) =>
+      safeToolRun(async () =>
+        sendBroadcastWorkflow({
+          broadcast_id,
+          channels,
+          text,
+          title,
+          summary,
+          details,
+          template_id,
+          blocks,
+          mrkdwn,
+          unfurl_links,
+          unfurl_media,
+          dry_run,
+          token_override,
+        })
+      )
+  );
+
+  server.registerTool(
+    "ops_audit_log_read",
+    {
+      description:
+        "Read recent local audit log entries for governance and troubleshooting.",
+      inputSchema: {
+        limit: z.number().int().min(1).max(500).optional(),
+        event: z.string().optional(),
+        method: z.string().optional(),
+      },
+    },
+    async ({ limit, event, method }) =>
+      safeToolRun(async () => {
+        const effectiveLimit = limit ?? 100;
+        const entries = safeReadAuditEntries(effectiveLimit, {
+          event: event || "",
+          method: method || "",
+        });
+        return {
+          audit_enabled: ENABLE_AUDIT_LOG,
+          audit_path: AUDIT_LOG_PATH,
+          requested_limit: effectiveLimit,
+          count: entries.length,
+          entries,
+        };
+      })
+  );
+
+  return { registered: 14 };
+}
+
 function registerCatalogMethodTools(server, catalog) {
   if (!ENABLE_METHOD_TOOLS) return { registered: 0 };
 
@@ -1888,15 +4381,24 @@ function registerCatalogMethodTools(server, catalog) {
       safeToolRun(async () => {
         const tokenStore = loadTokenStore();
         const activeProfile = resolveTokenStoreProfileBySelector(tokenStore, process.env.SLACK_PROFILE);
+        const clientConfig = loadClientConfig();
+        const runtimeGateway = getRuntimeGatewayConfig();
+        const auth = getAuthStatusSummary();
         return {
           catalog_path: CATALOG_PATH,
-          execution_mode: "local",
+          execution_mode: runtimeGateway.url ? "gateway" : "local",
+          auth: {
+            ready: auth.ready,
+            mode: auth.mode,
+            summary: auth.summary,
+          },
           method_tools_enabled: ENABLE_METHOD_TOOLS,
           max_method_tools: MAX_METHOD_TOOLS,
           methods_in_catalog: methods.length,
           method_tools_registered: registered,
           method_tool_prefix: METHOD_TOOL_PREFIX,
           token_store_path: TOKEN_STORE_PATH,
+          client_config_path: CLIENT_CONFIG_PATH,
           active_profile: activeProfile
             ? {
                 key: activeProfile.key,
@@ -1904,12 +4406,25 @@ function registerCatalogMethodTools(server, catalog) {
                 team_id: activeProfile.profile?.team_id || "",
               }
             : null,
+          client_profile: clientConfig.profile || "",
           env_tokens_present: {
             bot: Boolean(process.env.SLACK_BOT_TOKEN),
             user: Boolean(process.env.SLACK_USER_TOKEN),
             generic: Boolean(process.env.SLACK_TOKEN),
           },
+          gateway_mode: Boolean(runtimeGateway.url),
+          gateway_url: runtimeGateway.url || null,
           env_example_fallback_enabled: ALLOW_ENV_EXAMPLE_FALLBACK,
+          method_policy: {
+            allowlist: [...METHOD_ALLOWLIST.values()],
+            denylist: [...METHOD_DENYLIST.values()],
+            allow_prefixes: METHOD_ALLOW_PREFIXES,
+            deny_prefixes: METHOD_DENY_PREFIXES,
+          },
+          audit: {
+            enabled: ENABLE_AUDIT_LOG,
+            path: AUDIT_LOG_PATH,
+          },
         };
       })
   );
@@ -1925,17 +4440,16 @@ async function startMcpServer() {
 
   const catalog = loadCatalog();
   let coreStats = { registered: 0 };
-  let smartStats = { registered: 0 };
-  let compatCoreStats = { registered: 0 };
+  let gatewayStats = { registered: 0 };
+  const opsStats = registerOperationsTools(server);
 
   if (TOOL_EXPOSURE_MODE === "legacy") {
     coreStats = registerCoreTools(server);
-  } else {
-    smartStats = registerSmartGatewayTools(server, catalog);
+  } else if (TOOL_EXPOSURE_MODE === "developer") {
+    gatewayStats = registerSmartGatewayTools(server, catalog);
     if (SMART_COMPAT_CORE_TOOLS) {
-      compatCoreStats = registerCoreTools(server);
+      coreStats = registerCoreTools(server);
     }
-    coreStats = { registered: smartStats.registered + compatCoreStats.registered };
   }
   const methodStats = registerCatalogMethodTools(server, catalog);
 
@@ -1950,7 +4464,7 @@ async function startMcpServer() {
       : 0;
 
   console.error(
-    `[${SERVER_NAME}] connected via stdio | mode=${TOOL_EXPOSURE_MODE} | core_tools_registered=${coreStats?.registered ?? 0} | smart_tools_registered=${smartStats.registered} | compat_core_tools_registered=${compatCoreStats.registered} | catalog_methods=${catalogCount} | method_tools_registered=${methodStats.registered}`
+    `[${SERVER_NAME}] connected via stdio | mode=${TOOL_EXPOSURE_MODE} | ops_tools_registered=${opsStats.registered} | gateway_tools_registered=${gatewayStats.registered} | raw_core_tools_registered=${coreStats?.registered ?? 0} | catalog_methods=${catalogCount} | method_tools_registered=${methodStats.registered}`
   );
 }
 
