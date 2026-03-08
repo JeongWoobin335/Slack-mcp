@@ -71,6 +71,25 @@ const GATEWAY_COMPAT_HOST = "43.202.54.65.sslip.io";
 const GATEWAY_URL_ENV = process.env.SLACK_GATEWAY_URL || "";
 const GATEWAY_API_KEY = process.env.SLACK_GATEWAY_API_KEY || "";
 const GATEWAY_PROFILE = process.env.SLACK_GATEWAY_PROFILE || "";
+const GATEWAY_PUBLIC_BASE_URL =
+  process.env.SLACK_GATEWAY_PUBLIC_BASE_URL || ONBOARD_PUBLIC_BASE_URL;
+const GATEWAY_ALLOW_PUBLIC = parseBooleanEnv(process.env.SLACK_GATEWAY_ALLOW_PUBLIC, false);
+const GATEWAY_SHARED_SECRET =
+  process.env.SLACK_GATEWAY_SHARED_SECRET || process.env.SLACK_GATEWAY_API_KEY || "";
+const GATEWAY_CLIENT_API_KEY =
+  process.env.SLACK_GATEWAY_CLIENT_API_KEY || GATEWAY_API_KEY || GATEWAY_SHARED_SECRET;
+const GATEWAY_PUBLIC_ONBOARD_ENABLED = parseBooleanEnv(
+  process.env.SLACK_GATEWAY_PUBLIC_ONBOARD,
+  true
+);
+const GATEWAY_PUBLIC_ONBOARD_EXPOSE_API_KEY = parseBooleanEnv(
+  process.env.SLACK_GATEWAY_PUBLIC_ONBOARD_EXPOSE_API_KEY,
+  false
+);
+const GATEWAY_PUBLIC_ONBOARD_API_KEY = process.env.SLACK_GATEWAY_PUBLIC_ONBOARD_API_KEY || "";
+const GATEWAY_PUBLIC_ONBOARD_PROFILE_PREFIX =
+  process.env.SLACK_GATEWAY_PUBLIC_ONBOARD_PROFILE_PREFIX || "auto";
+const GATEWAY_STATE_TTL_MS = Number(process.env.SLACK_GATEWAY_STATE_TTL_MS || 15 * 60 * 1000);
 const INSECURE_TLS = parseBooleanEnv(process.env.SLACK_INSECURE_TLS, false);
 const GATEWAY_SKIP_TLS_VERIFY = parseBooleanEnv(
   process.env.SLACK_GATEWAY_SKIP_TLS_VERIFY,
@@ -1702,6 +1721,132 @@ function formatClientConfigSummary(config) {
   ].join("\n");
 }
 
+function buildGatewayRedirectUri(publicBaseUrl, callbackPath) {
+  const url = new URL(callbackPath, `${String(publicBaseUrl || "").replace(/\/+$/, "")}/`);
+  return url.toString();
+}
+
+function parseScopesFromQuery(searchParams, key, fallback) {
+  const value = searchParams.get(key);
+  return parseScopeList(value || fallback);
+}
+
+function buildOauthStartUrlFromPayload(gatewayBaseUrl, payload) {
+  const params = new URLSearchParams();
+  if (payload.profile) params.set("profile", payload.profile);
+  if (payload.team) params.set("team", payload.team);
+  if (payload.scope) params.set("scope", payload.scope);
+  if (payload.user_scope) params.set("user_scope", payload.user_scope);
+  return `${String(gatewayBaseUrl || "").replace(/\/+$/, "")}/oauth/start${
+    params.toString() ? `?${params.toString()}` : ""
+  }`;
+}
+
+function buildPublicOnboardPayload(gatewayBaseUrl, params = {}) {
+  const profile =
+    String(params.profile || "").trim() ||
+    createAutoOnboardProfileName(GATEWAY_PUBLIC_ONBOARD_PROFILE_PREFIX);
+  const team = String(params.team || process.env.SLACK_OAUTH_TEAM_ID || "").trim();
+  const scope = parseScopeList(params.scope || DEFAULT_OAUTH_BOT_SCOPES).join(",");
+  const userScope = parseScopeList(params.user_scope || DEFAULT_OAUTH_USER_SCOPES).join(",");
+  const payload = {
+    gateway_url: String(gatewayBaseUrl || "").replace(/\/+$/, ""),
+    gateway_api_key: "",
+    profile,
+    team,
+    scope,
+    user_scope: userScope,
+  };
+  if (GATEWAY_ALLOW_PUBLIC) {
+    payload.gateway_api_key = "";
+  } else if (GATEWAY_PUBLIC_ONBOARD_API_KEY) {
+    payload.gateway_api_key = GATEWAY_PUBLIC_ONBOARD_API_KEY;
+  } else if (GATEWAY_PUBLIC_ONBOARD_EXPOSE_API_KEY) {
+    payload.gateway_api_key = GATEWAY_CLIENT_API_KEY || "";
+  }
+  return {
+    ok: true,
+    mode: "public_onboard",
+    gateway_url: payload.gateway_url,
+    gateway_api_key: payload.gateway_api_key,
+    profile: payload.profile,
+    oauth_start_url: buildOauthStartUrlFromPayload(gatewayBaseUrl, payload),
+    requires_gateway_api_key: !GATEWAY_ALLOW_PUBLIC,
+  };
+}
+
+async function readRequestText(req, maxBytes = 1024 * 1024) {
+  return new Promise((resolve, reject) => {
+    const chunks = [];
+    let total = 0;
+    req.on("data", (chunk) => {
+      total += chunk.length;
+      if (total > maxBytes) {
+        reject(new Error("Request body too large."));
+        req.destroy();
+        return;
+      }
+      chunks.push(chunk);
+    });
+    req.on("end", () => resolve(Buffer.concat(chunks).toString("utf8")));
+    req.on("error", (error) => reject(error));
+  });
+}
+
+async function readRequestJson(req, maxBytes) {
+  const text = await readRequestText(req, maxBytes);
+  if (!text.trim()) return {};
+  try {
+    return JSON.parse(text);
+  } catch {
+    throw new Error("Invalid JSON body.");
+  }
+}
+
+function getRequestApiKey(req) {
+  const authHeader = req.headers.authorization || "";
+  if (authHeader.toLowerCase().startsWith("bearer ")) {
+    return authHeader.slice(7).trim();
+  }
+  const xApiKey = req.headers["x-api-key"];
+  return typeof xApiKey === "string" ? xApiKey.trim() : "";
+}
+
+function isGatewayAuthorized(req) {
+  if (GATEWAY_ALLOW_PUBLIC) return true;
+  const allowedKeys = [GATEWAY_SHARED_SECRET, GATEWAY_CLIENT_API_KEY].filter(Boolean);
+  if (allowedKeys.length === 0) return false;
+  const provided = getRequestApiKey(req);
+  return Boolean(provided && allowedKeys.includes(provided));
+}
+
+function requireGatewayClientCredentials() {
+  const clientId = process.env.SLACK_CLIENT_ID || "";
+  const clientSecret = process.env.SLACK_CLIENT_SECRET || "";
+  if (!clientId || !clientSecret) {
+    throw new Error("Gateway OAuth requires SLACK_CLIENT_ID and SLACK_CLIENT_SECRET on the gateway server.");
+  }
+  return { clientId, clientSecret };
+}
+
+function profileSummariesFromStore(store) {
+  const summaries = [];
+  for (const [key, profile] of Object.entries(store.profiles || {})) {
+    summaries.push({
+      key,
+      profile_name: profile.profile_name || "",
+      team_id: profile.team_id || "",
+      team_name: profile.team_name || "",
+      authed_user_id: profile.authed_user_id || "",
+      has_bot_token: Boolean(profile.bot_token),
+      has_user_token: Boolean(profile.user_token),
+      updated_at: profile.updated_at || null,
+      is_default: store.default_profile === key,
+    });
+  }
+  return summaries;
+}
+
 async function runOauthLogin(args) {
   const { options } = parseCliArgs(args);
   const clientId = options["client-id"] || process.env.SLACK_CLIENT_ID;
@@ -1923,6 +2068,9 @@ function printOnboardServerHelp() {
     "  SLACK_ONBOARD_SERVER_HOST, SLACK_ONBOARD_SERVER_PORT",
     "  SLACK_ONBOARD_PUBLIC_BASE_URL, SLACK_ONBOARD_SERVER_CALLBACK_PATH",
     "  SLACK_ONBOARD_CLAIM_TTL_MS",
+    "  SLACK_GATEWAY_PUBLIC_BASE_URL",
+    "  SLACK_GATEWAY_SHARED_SECRET / SLACK_GATEWAY_CLIENT_API_KEY",
+    "  SLACK_GATEWAY_ALLOW_PUBLIC, SLACK_GATEWAY_PUBLIC_ONBOARD",
   ];
   console.log(lines.join("\n"));
 }
@@ -2060,21 +2208,20 @@ async function runOnboardClient(args) {
 
 async function runOnboardServerStart(args) {
   const { options } = parseCliArgs(args);
-  const clientId = options["client-id"] || process.env.SLACK_CLIENT_ID;
-  const clientSecret = options["client-secret"] || process.env.SLACK_CLIENT_SECRET;
-  if (!clientId || !clientSecret) {
-    throw new Error("Missing SLACK_CLIENT_ID or SLACK_CLIENT_SECRET on onboarding server.");
-  }
+  const { clientId, clientSecret } = requireGatewayClientCredentials();
 
   const host = String(options.host || ONBOARD_SERVER_HOST);
   const port = Number(options.port || ONBOARD_SERVER_PORT);
   const callbackPath = String(options["callback-path"] || ONBOARD_CALLBACK_PATH);
-  const publicBaseUrl = String(options["public-base-url"] || ONBOARD_PUBLIC_BASE_URL).replace(/\/+$/, "");
+  const publicBaseUrl = String(
+    options["public-base-url"] || GATEWAY_PUBLIC_BASE_URL || ONBOARD_PUBLIC_BASE_URL
+  ).replace(/\/+$/, "");
   const claimTtlMs = Math.max(60_000, Number(options["claim-ttl-ms"] || ONBOARD_CLAIM_TTL_MS));
   const redirectUri = new URL(callbackPath, `${publicBaseUrl}/`).toString();
 
   const claimSessions = new Map();
   const stateToClaim = new Map();
+  const pendingStates = new Map();
 
   const server = http.createServer(async (req, res) => {
     try {
@@ -2082,21 +2229,34 @@ async function runOnboardServerStart(args) {
       const method = req.method || "GET";
       const requestUrl = new URL(req.url || "/", `http://${host}:${port}`);
 
-      if (method === "GET" && requestUrl.pathname === "/health") {
-        sendJson(res, 200, {
-          ok: true,
-          service: SERVER_NAME,
-          mode: "onboard_server",
-          public_base_url: publicBaseUrl,
-          callback_path: callbackPath,
-        });
-        return;
-      }
+        if (method === "GET" && requestUrl.pathname === "/health") {
+          sendJson(res, 200, {
+            ok: true,
+            service: SERVER_NAME,
+            mode: "gateway",
+            public_base_url: publicBaseUrl,
+            callback_path: callbackPath,
+            token_store_path: TOKEN_STORE_PATH,
+            client_config_path: CLIENT_CONFIG_PATH,
+          });
+          return;
+        }
 
-      if (method === "GET" && requestUrl.pathname === "/onboard/bootstrap") {
-        const profile = String(requestUrl.searchParams.get("profile") || "").trim();
-        const team = String(requestUrl.searchParams.get("team") || "").trim();
-        const botScopes = parseScopeList(requestUrl.searchParams.get("scope") || DEFAULT_OAUTH_BOT_SCOPES);
+        if (method === "GET" && requestUrl.pathname === "/onboard/bootstrap") {
+          if (GATEWAY_PUBLIC_ONBOARD_ENABLED) {
+            const payload = buildPublicOnboardPayload(publicBaseUrl, {
+              profile: requestUrl.searchParams.get("profile") || "",
+              team: requestUrl.searchParams.get("team") || "",
+              scope: requestUrl.searchParams.get("scope") || "",
+              user_scope: requestUrl.searchParams.get("user_scope") || "",
+            });
+            sendJson(res, 200, payload);
+            return;
+          }
+
+          const profile = String(requestUrl.searchParams.get("profile") || "").trim();
+          const team = String(requestUrl.searchParams.get("team") || "").trim();
+          const botScopes = parseScopeList(requestUrl.searchParams.get("scope") || DEFAULT_OAUTH_BOT_SCOPES);
         const userScopes = parseScopeList(
           requestUrl.searchParams.get("user_scope") || DEFAULT_OAUTH_USER_SCOPES
         );
@@ -2157,42 +2317,106 @@ async function runOnboardServerStart(args) {
         res.writeHead(302, { Location: authorizeUrl });
         res.end();
         return;
-      }
+        }
 
-      if (method === "GET" && requestUrl.pathname === callbackPath) {
-        const receivedError = requestUrl.searchParams.get("error");
-        if (receivedError) {
-          sendText(res, 400, `Slack OAuth failed: ${receivedError}`);
+        if (method === "GET" && requestUrl.pathname === "/oauth/start") {
+          const profileName = requestUrl.searchParams.get("profile") || "";
+          const teamId = requestUrl.searchParams.get("team") || process.env.SLACK_OAUTH_TEAM_ID || "";
+          const botScopes = parseScopesFromQuery(
+            requestUrl.searchParams,
+            "scope",
+            DEFAULT_OAUTH_BOT_SCOPES
+          );
+          const userScopes = parseScopesFromQuery(
+            requestUrl.searchParams,
+            "user_scope",
+            DEFAULT_OAUTH_USER_SCOPES
+          );
+
+          if (botScopes.length === 0 && userScopes.length === 0) {
+            sendJson(res, 400, { ok: false, error: "missing_scope" });
+            return;
+          }
+
+          const state = crypto.randomBytes(24).toString("hex");
+          pendingStates.set(state, {
+            created_at: Date.now(),
+            profile_name: profileName,
+            team_id: teamId,
+            bot_scopes: botScopes,
+            user_scopes: userScopes,
+          });
+
+          const authorizeUrl = buildOauthAuthorizeUrl({
+            clientId,
+            state,
+            redirectUri,
+            botScopes,
+            userScopes,
+            teamId,
+          });
+
+          res.writeHead(302, { Location: authorizeUrl });
+          res.end();
           return;
+        }
+
+        if (method === "GET" && requestUrl.pathname === callbackPath) {
+          const receivedError = requestUrl.searchParams.get("error");
+          if (receivedError) {
+            sendText(res, 400, `Slack OAuth failed: ${receivedError}`);
+            return;
         }
 
         const state = requestUrl.searchParams.get("state");
         const code = requestUrl.searchParams.get("code");
-        if (!state || !code) {
-          sendText(res, 400, "Missing state/code.");
+          if (!state || !code) {
+            sendText(res, 400, "Missing state/code.");
+            return;
+          }
+
+          const claimToken = stateToClaim.get(state);
+          if (claimToken) {
+            const session = claimSessions.get(claimToken);
+            if (!session || isClaimSessionExpired(session)) {
+              sendText(res, 400, "Expired onboarding claim.");
+              return;
+            }
+
+            const oauthResponse = await exchangeOauthCode({ clientId, clientSecret, code, redirectUri });
+            session.oauth_response = oauthResponse;
+            stateToClaim.delete(state);
+            sendText(res, 200, "Slack OAuth completed. Return to your CLI and wait for onboarding to finish.");
+            return;
+          }
+
+          const pending = pendingStates.get(state);
+          pendingStates.delete(state);
+          if (!pending) {
+            sendText(res, 400, "Invalid or expired OAuth state.");
+            return;
+          }
+          if (Date.now() - pending.created_at > GATEWAY_STATE_TTL_MS) {
+            sendText(res, 400, "Expired OAuth state.");
+            return;
+          }
+
+          const oauthResponse = await exchangeOauthCode({ clientId, clientSecret, code, redirectUri });
+          const { key, profile } = upsertOauthProfile(oauthResponse, pending.profile_name);
+          sendText(
+            res,
+            200,
+            [
+              "Slack OAuth authorization completed.",
+              `Saved profile: ${profile.profile_name || key}`,
+              `Profile key: ${key}`,
+              "You can close this tab.",
+            ].join("\n")
+          );
           return;
         }
 
-        const claimToken = stateToClaim.get(state);
-        if (!claimToken) {
-          sendText(res, 400, "Invalid OAuth state.");
-          return;
-        }
-
-        const session = claimSessions.get(claimToken);
-        if (!session || isClaimSessionExpired(session)) {
-          sendText(res, 400, "Expired onboarding claim.");
-          return;
-        }
-
-        const oauthResponse = await exchangeOauthCode({ clientId, clientSecret, code, redirectUri });
-        session.oauth_response = oauthResponse;
-        stateToClaim.delete(state);
-        sendText(res, 200, "Slack OAuth completed. Return to your CLI and wait for onboarding to finish.");
-        return;
-      }
-
-      if (method === "GET" && requestUrl.pathname === "/onboard/claim") {
+        if (method === "GET" && requestUrl.pathname === "/onboard/claim") {
         const claimToken = String(requestUrl.searchParams.get("claim") || "");
         const session = claimSessions.get(claimToken);
         if (!session || isClaimSessionExpired(session)) {
@@ -2211,26 +2435,114 @@ async function runOnboardServerStart(args) {
           profile: session.profile || "",
           oauth_response: session.oauth_response,
         });
-        claimSessions.delete(claimToken);
-        return;
-      }
+          claimSessions.delete(claimToken);
+          return;
+        }
 
-      sendJson(res, 404, { ok: false, error: "not_found" });
-    } catch (error) {
-      sendJson(res, 500, {
-        ok: false,
-        error: error instanceof Error ? error.message : String(error),
-      });
-    }
-  });
+        if (method === "GET" && requestUrl.pathname === "/oauth/link") {
+          const params = new URLSearchParams();
+          const profile = requestUrl.searchParams.get("profile") || "";
+          const team = requestUrl.searchParams.get("team") || "";
+          const scope = requestUrl.searchParams.get("scope") || "";
+          const userScope = requestUrl.searchParams.get("user_scope") || "";
+          if (profile) params.set("profile", profile);
+          if (team) params.set("team", team);
+          if (scope) params.set("scope", scope);
+          if (userScope) params.set("user_scope", userScope);
+          sendJson(res, 200, {
+            ok: true,
+            url: `${publicBaseUrl}/oauth/start${params.toString() ? `?${params.toString()}` : ""}`,
+          });
+          return;
+        }
+
+        if (method === "GET" && requestUrl.pathname === "/profiles") {
+          if (!isGatewayAuthorized(req)) {
+            sendJson(res, 401, { ok: false, error: "unauthorized" });
+            return;
+          }
+          const tokenStore = loadTokenStore();
+          sendJson(res, 200, {
+            ok: true,
+            default_profile: tokenStore.default_profile,
+            profiles: profileSummariesFromStore(tokenStore),
+          });
+          return;
+        }
+
+        if (method === "POST" && requestUrl.pathname === "/api/slack/call") {
+          if (!isGatewayAuthorized(req)) {
+            sendJson(res, 401, { ok: false, error: "unauthorized" });
+            return;
+          }
+
+          const payload = await readRequestJson(req, 1024 * 1024);
+          const methodName = payload.method;
+          if (!methodName || typeof methodName !== "string") {
+            sendJson(res, 400, { ok: false, error: "missing_method" });
+            return;
+          }
+
+          const candidates = getSlackTokenCandidates(payload.token_override, {
+            profileSelector:
+              payload.profile_selector || process.env.SLACK_PROFILE || GATEWAY_PROFILE || undefined,
+            preferredTokenType:
+              payload.preferred_token_type || process.env.SLACK_DEFAULT_TOKEN_TYPE || undefined,
+          });
+          if (candidates.length === 0) {
+            sendJson(res, 400, { ok: false, error: "missing_token" });
+            return;
+          }
+
+          const data = await callSlackApiWithCandidates(methodName, payload.params || {}, candidates);
+          sendJson(res, 200, { ok: true, data });
+          return;
+        }
+
+        if (method === "POST" && requestUrl.pathname === "/api/slack/http") {
+          if (!isGatewayAuthorized(req)) {
+            sendJson(res, 401, { ok: false, error: "unauthorized" });
+            return;
+          }
+
+          const payload = await readRequestJson(req, 1024 * 1024);
+          if (!payload.url || typeof payload.url !== "string") {
+            sendJson(res, 400, { ok: false, error: "missing_url" });
+            return;
+          }
+
+          const data = await proxySlackHttpRequest(payload);
+          sendJson(res, 200, { ok: true, data });
+          return;
+        }
+
+        sendJson(res, 404, { ok: false, error: "not_found" });
+      } catch (error) {
+        sendJson(res, 500, {
+          ok: false,
+          error: error instanceof Error ? error.message : String(error),
+          slack_error: error?.slack_error || null,
+          needed: error?.needed || null,
+          provided: error?.provided || null,
+          token_source: error?.token_source || null,
+        });
+      } finally {
+        for (const [state, value] of pendingStates.entries()) {
+          if (Date.now() - value.created_at > GATEWAY_STATE_TTL_MS) {
+            pendingStates.delete(state);
+          }
+        }
+      }
+    });
 
   await new Promise((resolve, reject) => {
     server.once("error", reject);
     server.listen(port, host, resolve);
   });
 
-  console.error(`[${SERVER_NAME}] onboard server listening at http://${host}:${port}`);
-  console.error(`[${SERVER_NAME}] public base: ${publicBaseUrl}`);
+  console.error(`[${SERVER_NAME}] gateway listening at http://${host}:${port} | public_base=${publicBaseUrl}`);
+  console.error(`[${SERVER_NAME}] oauth start URL: ${publicBaseUrl}/oauth/start`);
+  console.error(`[${SERVER_NAME}] profile list URL: ${publicBaseUrl}/profiles`);
   console.error(`[${SERVER_NAME}] bootstrap URL: ${publicBaseUrl}/onboard/bootstrap`);
 }
 
