@@ -2266,6 +2266,24 @@ async function runOnboardServerCli(args) {
   throw new Error(`Unknown onboard-server command: ${subcommand}`);
 }
 
+async function runGatewayCompatCli(args) {
+  const subcommand = (args[0] || "help").toLowerCase();
+  if (subcommand === "help" || subcommand === "--help" || subcommand === "-h") {
+    console.log("[gateway] deprecated alias detected. Use `onboard-server start` instead.");
+    printOnboardServerHelp();
+    return;
+  }
+  if (subcommand === "start") {
+    console.error("[gateway] deprecated alias detected. Redirecting to `onboard-server start`.");
+    await runOnboardServerStart(args.slice(1));
+    return;
+  }
+
+  throw new Error(
+    `Unknown gateway command: ${subcommand}. Use 'slack-max-api-mcp onboard-server help' for available commands.`
+  );
+}
+
 function loadCatalog() {
   if (!fs.existsSync(CATALOG_PATH)) {
     return { methods: [], scopes: [], totals: {} };
@@ -4483,12 +4501,17 @@ async function runEntryPoint() {
     await runOnboardServerCli(rest);
     return;
   }
+  if (command === "gateway") {
+    await runGatewayCompatCli(rest);
+    return;
+  }
   if (command === "help" || command === "--help" || command === "-h") {
     console.log("Usage:");
     console.log("  slack-max-api-mcp");
     console.log("  slack-max-api-mcp oauth <login|list|use|current|help>");
     console.log("  slack-max-api-mcp onboard <run|help>");
     console.log("  slack-max-api-mcp onboard-server <start|help>");
+    console.log("  slack-max-api-mcp gateway <start|help>  # deprecated alias");
     return;
   }
   if (command) {
