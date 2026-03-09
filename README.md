@@ -9,9 +9,9 @@ Operations-first Slack MCP server for Codex/Claude Code over `stdio`.
 
 ## Tool exposure
 
-- `operations` (default): 14 operations-first tools only
+- `operations` (default): 21 operations-first tools only
 - `developer`: operations tools + `gateway_*` + core Slack API tools
-- `legacy`: fixed core tools + optional catalog method tools
+- `legacy`: fixed core tools + optional catalog method tools (final count depends on method-tool settings)
 
 Environment:
 
@@ -27,6 +27,11 @@ Environment:
 The default surface is now operations-first and keeps raw API wrappers out of the main tool list:
 
 - `ops_policy_info`: runtime policy/audit guardrails
+- `ops_access_policy_info`: active access profile, effective rules, pending requests, active grants
+- `ops_access_policy_set`: switch active access-control profile (`open`, `readonly`, `restricted`)
+- `ops_access_request`: create a scoped elevation request for read/write/admin/delete access
+- `ops_access_approve`: approve a pending elevation request and activate a time-boxed grant
+- `ops_access_revoke`: revoke one grant or all active grants
 - `ops_playbook_list`: built-in operations playbooks
 - `ops_state_overview`: inspect local operations state (`incidents`, `digests`, `broadcasts`, `followups`)
 - `ops_incident_create`: create + optionally announce a tracked incident
@@ -39,6 +44,8 @@ The default surface is now operations-first and keeps raw API wrappers out of th
 - `ops_sla_breach_scan`: detect SLA breach threads across multiple channels
 - `ops_sla_followup`: auto follow-up replies for SLA breaches with duplicate-suppression state
 - `ops_broadcast_message`: send a prepared draft or direct operational announcement
+- `ops_recent_failures`: list recent human-readable failures from local diagnostics state
+- `ops_explain_error`: explain one recorded failure with troubleshooting hints
 - `ops_audit_log_read`: inspect local JSONL audit logs
 
 These tools let teams run repeatable Slack operations without rebuilding multi-step API call chains, and they persist local operational state to make incidents/broadcasts/followups first-class records.
@@ -51,6 +58,13 @@ These tools let teams run repeatable Slack operations without rebuilding multi-s
 - Override path: `SLACK_OPERATIONS_STATE_PATH=<path>`
 
 The operations config controls incident templates, digest defaults, broadcast templates, and follow-up suppression windows.
+
+### Access control and diagnostics
+
+- Access control is enforced inside the MCP server, not only by prompt instructions.
+- Default profiles are `open`, `readonly`, and `restricted`.
+- Elevation is two-step: create a scoped request with `ops_access_request`, then explicitly approve it with `ops_access_approve`.
+- Recorded failures are stored in operations state and can be inspected with `ops_recent_failures` and `ops_explain_error`.
 
 ### Playbook examples
 

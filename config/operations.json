@@ -71,5 +71,37 @@
     "default_max_messages": 30,
     "suppress_hours": 6,
     "reminder_template": "Friendly reminder: this thread appears to be pending for more than {{sla_minutes}} minutes. Please provide an update."
+  },
+  "access_control": {
+    "enabled": true,
+    "default_profile": "open",
+    "profiles": {
+      "open": {
+        "description": "No additional Slack access restrictions.",
+        "read": { "allow_all": true },
+        "write": { "allow_all": true },
+        "admin": { "allow_all": true },
+        "delete": { "allow_all": true }
+      },
+      "readonly": {
+        "description": "Read-only Slack access. Write/admin/delete actions are blocked.",
+        "read": { "allow_all": true },
+        "write": { "allow_all": false },
+        "admin": { "allow_all": false },
+        "delete": { "allow_all": false }
+      },
+      "restricted": {
+        "description": "All Slack access is blocked unless an elevation grant is approved.",
+        "read": { "allow_all": false },
+        "write": { "allow_all": false },
+        "admin": { "allow_all": false },
+        "delete": { "allow_all": false }
+      }
+    },
+    "elevation": {
+      "enabled": true,
+      "default_duration_minutes": 30,
+      "max_duration_minutes": 240
+    }
   }
 }

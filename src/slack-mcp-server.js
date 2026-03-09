@@ -163,6 +163,11 @@ function parseScopeList(raw) {
   return [...new Set(String(raw).split(",").map((part) => part.trim()).filter(Boolean))];
 }
 
+function normalizeStringArray(value) {
+  const items = Array.isArray(value) ? value : value === undefined || value === null ? [] : [value];
+  return [...new Set(items.map((item) => String(item || "").trim()).filter(Boolean))];
+}
+
 function normalizeOnboardNamePart(value, fallback) {
   const normalized = String(value || "")
     .trim()
@@ -313,6 +318,38 @@ function defaultOperationsConfig() {
       reminder_template:
         "Friendly reminder: this thread appears to be pending for more than {{sla_minutes}} minutes. Please provide an update.",
     },
+    access_control: {
+      enabled: true,
+      default_profile: "open",
+      profiles: {
+        open: {
+          description: "No additional Slack access restrictions.",
+          read: { allow_all: true },
+          write: { allow_all: true },
+          admin: { allow_all: true },
+          delete: { allow_all: true },
+        },
+        readonly: {
+          description: "Read-only Slack access. Write/admin/delete actions are blocked.",
+          read: { allow_all: true },
+          write: { allow_all: false },
+          admin: { allow_all: false },
+          delete: { allow_all: false },
+        },
+        restricted: {
+          description: "All Slack access is blocked unless an elevation grant is approved.",
+          read: { allow_all: false },
+          write: { allow_all: false },
+          admin: { allow_all: false },
+          delete: { allow_all: false },
+        },
+      },
+      elevation: {
+        enabled: true,
+        default_duration_minutes: 30,
+        max_duration_minutes: 240,
+      },
+    },
   };
 }
 
@@ -350,6 +387,206 @@ function normalizeObjectMap(value) {
   return value;
 }
 
+function normalizeChannelTargetValue(value) {
+  if (!value) return null;
+  if (typeof value === "string") {
+    const reference = String(value).trim();
+    const normalized = normalizeChannelReference(reference).toLowerCase();
+    if (!normalized) return null;
+    return {
+      id: isLikelyChannelId(normalized) ? normalized : null,
+      name: isLikelyChannelId(normalized) ? null : normalized,
+      reference,
+      normalized,
+    };
+  }
+
+  if (typeof value === "object") {
+    const reference = String(value.reference || value.id || value.name || "").trim();
+    const id = String(value.id || "").trim();
+    const name = String(value.name || "").trim();
+    const normalized =
+      normalizeChannelReference(id || name || reference).toLowerCase() || null;
+    if (!reference && !id && !name && !normalized) return null;
+    return {
+      id: id || (normalized && isLikelyChannelId(normalized) ? normalized : null),
+      name: name || (normalized && !isLikelyChannelId(normalized) ? normalized : null),
+      reference: reference || id || name || normalized,
+      normalized,
+    };
+  }
+
+  return null;
+}
+
+function normalizeChannelTargetList(value) {
+  const seen = new Set();
+  const targets = [];
+  const items = Array.isArray(value) ? value : value ? [value] : [];
+  for (const item of items) {
+    const normalized = normalizeChannelTargetValue(item);
+    if (!normalized) continue;
+    const key = normalized.id || normalized.normalized || normalized.reference;
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
+    targets.push(normalized);
+  }
+  return targets;
+}
+
+function emptyAccessRule(defaultAllowAll = false) {
+  return {
+    allow_all: defaultAllowAll,
+    methods_allow: [],
+    tools_allow: [],
+    channels_allow: [],
+  };
+}
+
+function normalizeAccessRule(value, defaultAllowAll = false) {
+  if (typeof value === "boolean") {
+    return {
+      ...emptyAccessRule(defaultAllowAll),
+      allow_all: value,
+    };
+  }
+
+  const source = value && typeof value === "object" ? value : {};
+  return {
+    allow_all: source.allow_all === undefined ? defaultAllowAll : Boolean(source.allow_all),
+    methods_allow: normalizeStringArray(source.methods_allow),
+    tools_allow: normalizeStringArray(source.tools_allow),
+    channels_allow: normalizeChannelTargetList(source.channels_allow),
+  };
+}
+
+function normalizeAccessProfile(value) {
+  const source = value && typeof value === "object" ? value : {};
+  return {
+    description: String(source.description || "").trim(),
+    read: normalizeAccessRule(source.read, false),
+    write: normalizeAccessRule(source.write, false),
+    admin: normalizeAccessRule(source.admin, false),
+    delete: normalizeAccessRule(source.delete, false),
+  };
+}
+
+function normalizeAccessProfiles(value) {
+  const rawProfiles = normalizeObjectMap(value);
+  const profiles = {};
+  for (const [name, profile] of Object.entries(rawProfiles)) {
+    profiles[name] = normalizeAccessProfile(profile);
+  }
+  return profiles;
+}
+
+function getAccessControlConfig() {
+  const defaults = defaultOperationsConfig().access_control;
+  const configured = OPERATIONS_CONFIG?.access_control || {};
+  const merged = deepMergeObjects(defaults, configured);
+  return {
+    enabled: configured.enabled === undefined ? true : Boolean(merged.enabled),
+    default_profile: String(merged.default_profile || defaults.default_profile || "open"),
+    profiles: normalizeAccessProfiles(merged.profiles),
+    elevation: {
+      enabled:
+        merged?.elevation?.enabled === undefined ? true : Boolean(merged.elevation.enabled),
+      default_duration_minutes: Math.max(
+        1,
+        Number(
+          merged?.elevation?.default_duration_minutes ||
+            defaults.elevation.default_duration_minutes ||
+            30
+        ) || 30
+      ),
+      max_duration_minutes: Math.max(
+        1,
+        Number(
+          merged?.elevation?.max_duration_minutes ||
+            defaults.elevation.max_duration_minutes ||
+            240
+        ) || 240
+      ),
+    },
+  };
+}
+
+function emptyAccessControlState() {
+  return {
+    active_profile: null,
+    requests: {},
+    grants: {},
+  };
+}
+
+function normalizeAccessRequestRecord(record) {
+  const source = record && typeof record === "object" ? record : {};
+  return {
+    id: String(source.id || ""),
+    status: String(source.status || "pending"),
+    requested_at: source.requested_at || null,
+    approved_at: source.approved_at || null,
+    expires_at: source.expires_at || null,
+    actions: normalizeStringArray(source.actions),
+    methods_allow: normalizeStringArray(source.methods_allow),
+    tools_allow: normalizeStringArray(source.tools_allow),
+    channels_allow: normalizeChannelTargetList(source.channels_allow),
+    duration_minutes: Math.max(1, Number(source.duration_minutes || 0) || 0),
+    reason: String(source.reason || "").trim(),
+    grant_id: source.grant_id || null,
+  };
+}
+
+function isAccessGrantExpired(grant) {
+  const expiresAt = Date.parse(grant?.expires_at || "");
+  return Number.isFinite(expiresAt) && expiresAt <= Date.now();
+}
+
+function normalizeAccessGrantRecord(record) {
+  const source = normalizeAccessRequestRecord(record);
+  const status = source.status === "revoked" ? "revoked" : source.status === "expired" ? "expired" : "active";
+  return {
+    ...source,
+    status: status === "active" && isAccessGrantExpired(source) ? "expired" : status,
+    created_at: source.requested_at || source.created_at || null,
+    revoked_at: source.revoked_at || null,
+  };
+}
+
+function normalizeAccessControlState(value) {
+  const out = {
+    ...emptyAccessControlState(),
+    ...(value && typeof value === "object" ? value : {}),
+  };
+  out.active_profile = out.active_profile ? String(out.active_profile) : null;
+  out.requests = Object.fromEntries(
+    Object.entries(normalizeObjectMap(out.requests)).map(([id, record]) => [
+      id,
+      normalizeAccessRequestRecord({ id, ...record }),
+    ])
+  );
+  out.grants = Object.fromEntries(
+    Object.entries(normalizeObjectMap(out.grants)).map(([id, record]) => [
+      id,
+      normalizeAccessGrantRecord({ id, ...record }),
+    ])
+  );
+  return out;
+}
+
+function emptyDiagnosticsState() {
+  return {
+    failures: [],
+  };
+}
+
+function normalizeDiagnosticsState(value) {
+  const out = value && typeof value === "object" ? value : {};
+  return {
+    failures: Array.isArray(out.failures) ? out.failures : [],
+  };
+}
+
 function emptyOperationsState() {
   return {
     version: 1,
@@ -359,6 +596,8 @@ function emptyOperationsState() {
     broadcasts: {},
     followups: {},
     playbook_runs: [],
+    access_control: emptyAccessControlState(),
+    diagnostics: emptyDiagnosticsState(),
   };
 }
 
@@ -372,6 +611,8 @@ function normalizeOperationsState(value) {
   out.broadcasts = normalizeObjectMap(out.broadcasts);
   out.followups = normalizeObjectMap(out.followups);
   out.playbook_runs = Array.isArray(out.playbook_runs) ? out.playbook_runs : [];
+  out.access_control = normalizeAccessControlState(out.access_control);
+  out.diagnostics = normalizeDiagnosticsState(out.diagnostics);
   return out;
 }
 
@@ -459,6 +700,9 @@ function buildOperationsStateSummary(state) {
   const broadcasts = Object.values(normalizeObjectMap(state?.broadcasts));
   const digests = Object.values(normalizeObjectMap(state?.digests));
   const followups = Object.values(normalizeObjectMap(state?.followups));
+  const accessControl = normalizeAccessControlState(state?.access_control);
+  const diagnostics = normalizeDiagnosticsState(state?.diagnostics);
+  const activeGrants = Object.values(accessControl.grants).filter((grant) => grant.status === "active");
 
   return {
     incidents_total: incidents.length,
@@ -468,7 +712,492 @@ function buildOperationsStateSummary(state) {
     digests_total: digests.length,
     followups_total: followups.length,
     playbook_runs_total: Array.isArray(state?.playbook_runs) ? state.playbook_runs.length : 0,
+    access_active_profile: accessControl.active_profile || null,
+    access_pending_requests: Object.values(accessControl.requests).filter(
+      (request) => request.status === "pending"
+    ).length,
+    access_active_grants: activeGrants.length,
+    diagnostics_recent_failures: diagnostics.failures.length,
     last_updated_at: state?.updated_at || null,
+  };
+}
+
+function appendDiagnosticFailure(state, record) {
+  const diagnostics = normalizeDiagnosticsState(state?.diagnostics);
+  const failures = Array.isArray(diagnostics.failures) ? diagnostics.failures.slice(-99) : [];
+  failures.push(record);
+  state.diagnostics = {
+    failures,
+  };
+  return record;
+}
+
+function listRecentFailures(state, options = {}) {
+  const failures = [...normalizeDiagnosticsState(state?.diagnostics).failures].reverse();
+  const limit = Math.max(1, Math.min(200, Number(options.limit) || 20));
+  const kind = String(options.kind || "").trim().toLowerCase();
+  const method = String(options.method || "").trim().toLowerCase();
+
+  return failures
+    .filter((failure) => {
+      if (kind && String(failure?.kind || "").toLowerCase() !== kind) return false;
+      if (method && String(failure?.method || "").toLowerCase() !== method) return false;
+      return true;
+    })
+    .slice(0, limit);
+}
+
+function emptySlackAccessProfile() {
+  return normalizeAccessProfile({
+    description: "Fallback unrestricted profile.",
+    read: { allow_all: true },
+    write: { allow_all: true },
+    admin: { allow_all: true },
+    delete: { allow_all: true },
+  });
+}
+
+function mergeAccessRules(baseRule, extraRule) {
+  const base = normalizeAccessRule(baseRule, false);
+  const extra = normalizeAccessRule(extraRule, false);
+  const channels = [...base.channels_allow, ...extra.channels_allow];
+
+  return {
+    allow_all: base.allow_all || extra.allow_all,
+    methods_allow: normalizeStringArray([...base.methods_allow, ...extra.methods_allow]),
+    tools_allow: normalizeStringArray([...base.tools_allow, ...extra.tools_allow]),
+    channels_allow: normalizeChannelTargetList(channels),
+  };
+}
+
+function getConfiguredAccessProfile(profileName) {
+  const config = getAccessControlConfig();
+  return (
+    config.profiles[profileName] ||
+    config.profiles[config.default_profile] ||
+    config.profiles.open ||
+    emptySlackAccessProfile()
+  );
+}
+
+function listActiveAccessGrants(state) {
+  return Object.values(normalizeAccessControlState(state?.access_control).grants).filter(
+    (grant) => grant.status === "active" && !isAccessGrantExpired(grant)
+  );
+}
+
+function buildEffectiveAccessRule(state, actionType) {
+  const accessConfig = getAccessControlConfig();
+  const accessState = normalizeAccessControlState(state?.access_control);
+  const profileName = accessState.active_profile || accessConfig.default_profile;
+  const profile = getConfiguredAccessProfile(profileName);
+  let rule = normalizeAccessRule(profile?.[actionType], false);
+  const grantIds = [];
+
+  for (const grant of listActiveAccessGrants(state)) {
+    if (!grant.actions.includes(actionType) && !grant.actions.includes("*")) continue;
+    rule = mergeAccessRules(rule, grant);
+    grantIds.push(grant.id);
+  }
+
+  return {
+    profile_name: profileName,
+    profile_description: profile.description || "",
+    rule,
+    grant_ids: grantIds,
+  };
+}
+
+function matchesNamedAccessPattern(target, patterns) {
+  const normalizedTarget = String(target || "").trim().toLowerCase();
+  if (!normalizedTarget) return false;
+
+  return normalizeStringArray(patterns).some((pattern) => {
+    const normalizedPattern = String(pattern).trim().toLowerCase();
+    if (!normalizedPattern) return false;
+    if (normalizedPattern.endsWith("*")) {
+      return normalizedTarget.startsWith(normalizedPattern.slice(0, -1));
+    }
+    if (normalizedPattern.endsWith(".")) {
+      return normalizedTarget.startsWith(normalizedPattern);
+    }
+    return normalizedTarget === normalizedPattern;
+  });
+}
+
+function matchesChannelAccessTarget(target, allowedTargets) {
+  const normalizedTarget = normalizeChannelTargetValue(target);
+  if (!normalizedTarget) return false;
+
+  return normalizeChannelTargetList(allowedTargets).some((allowed) => {
+    if (allowed.id && normalizedTarget.id) {
+      return allowed.id.toLowerCase() === normalizedTarget.id.toLowerCase();
+    }
+
+    const candidateValues = [
+      normalizedTarget.normalized,
+      String(normalizedTarget.reference || "").trim().toLowerCase(),
+      String(normalizedTarget.name || "").trim().toLowerCase(),
+    ].filter(Boolean);
+    const allowedValues = [
+      allowed.normalized,
+      String(allowed.reference || "").trim().toLowerCase(),
+      String(allowed.name || "").trim().toLowerCase(),
+    ].filter(Boolean);
+
+    return candidateValues.some((candidate) => allowedValues.includes(candidate));
+  });
+}
+
+function summarizeChannelTargets(targets) {
+  return normalizeChannelTargetList(targets).map((target) => ({
+    id: target.id || null,
+    name: target.name || null,
+    reference: target.reference || null,
+  }));
+}
+
+function summarizeAccessRule(rule) {
+  const normalized = normalizeAccessRule(rule, false);
+  return {
+    allow_all: normalized.allow_all,
+    methods_allow: normalized.methods_allow,
+    tools_allow: normalized.tools_allow,
+    channels_allow: summarizeChannelTargets(normalized.channels_allow),
+  };
+}
+
+function extractChannelTargetsFromParams(params) {
+  const out = [];
+  const source = toRecordObject(params);
+  for (const [key, value] of Object.entries(source)) {
+    if (!/(^channels?$|channel_ids?$|^conversations?$|conversation_ids?$)/i.test(key)) continue;
+    if (Array.isArray(value)) {
+      out.push(...value);
+      continue;
+    }
+    out.push(value);
+  }
+  return normalizeChannelTargetList(out);
+}
+
+function classifySlackMethodAction(method) {
+  const normalizedMethod = String(method || "").trim().toLowerCase();
+  if (!normalizedMethod) return "write";
+
+  if (
+    normalizedMethod.startsWith("admin.") ||
+    normalizedMethod.startsWith("scim.") ||
+    normalizedMethod.startsWith("audit.") ||
+    normalizedMethod.startsWith("legalholds.")
+  ) {
+    return "admin";
+  }
+
+  if (
+    /(delete|remove|revoke|archive|close|discard|purge|erase|disconnect|kick|unlink)(\.|$)/.test(
+      normalizedMethod
+    )
+  ) {
+    return "delete";
+  }
+
+  if (
+    /(get|info|list|history|replies|lookup|search|read|query|current|view|test)(\.|$)/.test(
+      normalizedMethod
+    ) ||
+    normalizedMethod.startsWith("search.")
+  ) {
+    return "read";
+  }
+
+  return "write";
+}
+
+function classifyHttpAction(httpMethod, url) {
+  const normalizedMethod = String(httpMethod || "GET").trim().toUpperCase();
+  const normalizedUrl = String(url || "").toLowerCase();
+
+  if (normalizedMethod === "GET" || normalizedMethod === "HEAD") return "read";
+  if (normalizedMethod === "DELETE") return "delete";
+  if (
+    normalizedUrl.includes("/admin/") ||
+    normalizedUrl.includes("/scim/") ||
+    normalizedUrl.includes("/audit/") ||
+    normalizedUrl.includes("/legal-holds/")
+  ) {
+    return "admin";
+  }
+  return "write";
+}
+
+function buildFailureGuidance(record) {
+  const possibleCauses = [];
+  const nextSteps = [];
+
+  if (record.kind === "access_control") {
+    possibleCauses.push("The current access-control profile blocked the requested action.");
+    nextSteps.push("Inspect the current profile and grants with ops_access_policy_info.");
+    nextSteps.push("If this action is necessary, create a scoped elevation request and approve it explicitly.");
+  } else if (record.http_status === 429) {
+    possibleCauses.push("Slack or the upstream endpoint rate-limited the request.");
+    nextSteps.push("Retry after the server cool-down period or narrow the batch size.");
+  } else if (record.slack_error === "missing_scope") {
+    possibleCauses.push("The active Slack token does not include the scope required by this method.");
+    nextSteps.push("Check the token source and re-run OAuth with the required scopes.");
+  } else if (record.slack_error === "not_allowed_token_type") {
+    possibleCauses.push("The request used the wrong token type for this method.");
+    nextSteps.push("Retry with the correct preferred token type or a different profile.");
+  } else if (record.slack_error === "channel_not_found") {
+    possibleCauses.push("The supplied channel reference could not be resolved or is not visible to the token.");
+    nextSteps.push("Verify the channel name/id and ensure the token has channel read access.");
+  } else if (record.slack_error === "not_in_channel") {
+    possibleCauses.push("The bot/user token is not a member of the target channel.");
+    nextSteps.push("Invite the app or token owner to the channel, or use a token that is already a member.");
+  } else if (record.slack_error === "invalid_auth" || record.slack_error === "not_authed") {
+    possibleCauses.push("Authentication failed because the active token is missing or invalid.");
+    nextSteps.push("Check oauth current / onboard config and confirm which token source is active.");
+  } else if (record.http_status && Number(record.http_status) >= 500) {
+    possibleCauses.push("The upstream service returned a server-side failure.");
+    nextSteps.push("Retry after checking the latest failure details and upstream availability.");
+  } else {
+    possibleCauses.push("The tool raised an application-level failure that needs inspection.");
+    nextSteps.push("Review the latest failure details and the relevant method/input metadata.");
+  }
+
+  return {
+    possible_causes: possibleCauses,
+    next_steps: nextSteps,
+  };
+}
+
+function recordDiagnosticFailure(error, extra = {}) {
+  if (error && typeof error === "object" && error.failure_id) {
+    return error.failure_id;
+  }
+
+  const failureId = createOperationId("err");
+  const now = new Date().toISOString();
+  const channelTargets = normalizeChannelTargetList(extra.channel_targets || error?.access_context?.channel_targets);
+  const record = {
+    id: failureId,
+    recorded_at: now,
+    kind:
+      extra.kind ||
+      error?.failure_kind ||
+      (error?.access_context ? "access_control" : error?.slack_error ? "slack_api" : "tool"),
+    message: error instanceof Error ? error.message : String(error),
+    slack_error: error?.slack_error || null,
+    http_status: error?.http_status || extra.http_status || null,
+    method: error?.slack_method || extra.method || null,
+    http_method: extra.http_method || null,
+    url: error?.http_url || extra.url || null,
+    token_source: error?.token_source || null,
+    params_keys: normalizeStringArray(extra.params_keys),
+    channel_targets: channelTargets.map((target) => ({
+      id: target.id || null,
+      name: target.name || null,
+      reference: target.reference || null,
+    })),
+    access_context: error?.access_context || null,
+  };
+  record.troubleshooting = buildFailureGuidance(record);
+
+  mutateOperationsState((state) => {
+    appendDiagnosticFailure(state, record);
+  });
+
+  safeJsonlAppend(AUDIT_LOG_PATH, {
+    ts: now,
+    event: "tool_failure",
+    failure_id: failureId,
+    kind: record.kind,
+    message: record.message,
+    method: record.method,
+    slack_error: record.slack_error,
+    http_status: record.http_status,
+    token_source: record.token_source,
+  });
+
+  if (error && typeof error === "object") {
+    error.failure_id = failureId;
+  }
+  return failureId;
+}
+
+function describeAccessTarget(context) {
+  const parts = [];
+  if (context.method) parts.push(`method=${context.method}`);
+  if (context.url) parts.push(`url=${context.url}`);
+  if (context.tool_name) parts.push(`tool=${context.tool_name}`);
+  if (Array.isArray(context.channel_targets) && context.channel_targets.length > 0) {
+    parts.push(
+      `channels=${context.channel_targets
+        .map((target) => target.reference || target.id || target.name || "")
+        .filter(Boolean)
+        .join(",")}`
+    );
+  }
+  return parts.join(" | ");
+}
+
+function assertAccessAllowed(context = {}) {
+  const accessConfig = getAccessControlConfig();
+  if (!accessConfig.enabled) return;
+
+  const actionType = String(context.action_type || "").trim().toLowerCase();
+  if (!actionType) return;
+
+  const state = loadOperationsState();
+  const effective = buildEffectiveAccessRule(state, actionType);
+  const rule = effective.rule;
+  const channelTargets = normalizeChannelTargetList(context.channel_targets);
+  const methodAllowed = context.method && matchesNamedAccessPattern(context.method, rule.methods_allow);
+  const toolAllowed = context.tool_name && matchesNamedAccessPattern(context.tool_name, rule.tools_allow);
+  const channelsAllowed =
+    channelTargets.length > 0 &&
+    channelTargets.every((target) => matchesChannelAccessTarget(target, rule.channels_allow));
+  const allowed = rule.allow_all || Boolean(methodAllowed || toolAllowed || channelsAllowed);
+
+  if (allowed) return;
+
+  const error = new Error(
+    `Access policy blocked ${actionType} action. Active profile=${effective.profile_name}. Target=${describeAccessTarget({
+      ...context,
+      channel_targets: channelTargets,
+    }) || "n/a"}.`
+  );
+  error.failure_kind = "access_control";
+  error.access_context = {
+    action_type: actionType,
+    profile_name: effective.profile_name,
+    profile_description: effective.profile_description,
+    grant_ids: effective.grant_ids,
+    method: context.method || null,
+    tool_name: context.tool_name || null,
+    url: context.url || null,
+    channel_targets: channelTargets.map((target) => ({
+      id: target.id || null,
+      name: target.name || null,
+      reference: target.reference || null,
+    })),
+  };
+  recordDiagnosticFailure(error, {
+    kind: "access_control",
+    method: context.method,
+    url: context.url,
+    channel_targets: channelTargets,
+  });
+  throw error;
+}
+
+function clampElevationDurationMinutes(value) {
+  const elevationConfig = getAccessControlConfig().elevation || {};
+  const fallback = Math.max(1, Number(elevationConfig.default_duration_minutes || 30) || 30);
+  const max = Math.max(
+    fallback,
+    Number(elevationConfig.max_duration_minutes || elevationConfig.default_duration_minutes || fallback) ||
+      fallback
+  );
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric) || numeric <= 0) return fallback;
+  return Math.max(1, Math.min(max, Math.trunc(numeric)));
+}
+
+function summarizeAccessRequestRecord(record) {
+  const normalized = normalizeAccessRequestRecord(record);
+  return {
+    id: normalized.id,
+    status: normalized.status,
+    requested_at: normalized.requested_at,
+    approved_at: normalized.approved_at,
+    expires_at: normalized.expires_at,
+    duration_minutes: normalized.duration_minutes,
+    reason: normalized.reason || "",
+    grant_id: normalized.grant_id || null,
+    actions: normalized.actions,
+    methods_allow: normalized.methods_allow,
+    tools_allow: normalized.tools_allow,
+    channels_allow: summarizeChannelTargets(normalized.channels_allow),
+  };
+}
+
+function summarizeAccessGrantRecord(record) {
+  const normalized = normalizeAccessGrantRecord(record);
+  return {
+    id: normalized.id,
+    status: normalized.status,
+    created_at: normalized.created_at || null,
+    approved_at: normalized.approved_at,
+    expires_at: normalized.expires_at,
+    revoked_at: normalized.revoked_at || null,
+    duration_minutes: normalized.duration_minutes,
+    reason: normalized.reason || "",
+    actions: normalized.actions,
+    methods_allow: normalized.methods_allow,
+    tools_allow: normalized.tools_allow,
+    channels_allow: summarizeChannelTargets(normalized.channels_allow),
+  };
+}
+
+function listAccessRequests(state, options = {}) {
+  const accessState = normalizeAccessControlState(state?.access_control);
+  const status = String(options.status || "").trim().toLowerCase();
+  const limit = Math.max(1, Math.min(200, Number(options.limit) || 20));
+
+  return Object.values(accessState.requests)
+    .map((record) => normalizeAccessRequestRecord(record))
+    .filter((record) => {
+      if (!status) return true;
+      return String(record.status || "").trim().toLowerCase() === status;
+    })
+    .sort((a, b) =>
+      String(b.approved_at || b.requested_at || "").localeCompare(String(a.approved_at || a.requested_at || ""))
+    )
+    .slice(0, limit);
+}
+
+function buildAccessControlOverview(state) {
+  const accessConfig = getAccessControlConfig();
+  const accessState = normalizeAccessControlState(state?.access_control);
+  const activeProfile = accessState.active_profile || accessConfig.default_profile || null;
+  const configuredProfiles = Object.fromEntries(
+    Object.entries(accessConfig.profiles || {}).map(([name, profile]) => [
+      name,
+      {
+        description: profile?.description || "",
+        read: summarizeAccessRule(profile?.read),
+        write: summarizeAccessRule(profile?.write),
+        admin: summarizeAccessRule(profile?.admin),
+        delete: summarizeAccessRule(profile?.delete),
+      },
+    ])
+  );
+
+  return {
+    enabled: accessConfig.enabled,
+    default_profile: accessConfig.default_profile,
+    active_profile: activeProfile,
+    elevation: {
+      enabled: accessConfig.elevation?.enabled !== false,
+      default_duration_minutes: clampElevationDurationMinutes(
+        accessConfig.elevation?.default_duration_minutes
+      ),
+      max_duration_minutes: clampElevationDurationMinutes(
+        accessConfig.elevation?.max_duration_minutes
+      ),
+    },
+    configured_profiles: configuredProfiles,
+    effective_rules: {
+      read: summarizeAccessRule(buildEffectiveAccessRule(state, "read").rule),
+      write: summarizeAccessRule(buildEffectiveAccessRule(state, "write").rule),
+      admin: summarizeAccessRule(buildEffectiveAccessRule(state, "admin").rule),
+      delete: summarizeAccessRule(buildEffectiveAccessRule(state, "delete").rule),
+    },
+    pending_requests: listAccessRequests(state, { status: "pending", limit: 50 }).map(
+      summarizeAccessRequestRecord
+    ),
+    active_grants: listActiveAccessGrants(state).map(summarizeAccessGrantRecord),
   };
 }
 
@@ -943,7 +1672,8 @@ async function resolveChannelReference(channelRef, tokenOverride) {
         limit: 200,
         cursor,
       },
-      tokenOverride
+      tokenOverride,
+      { internalBypassAccess: true }
     );
 
     const channels = Array.isArray(data?.channels) ? data.channels : [];
@@ -1270,6 +2000,13 @@ async function callSlackApiWithToken(method, params = {}, token, tokenSource) {
     error.needed = data.needed;
     error.provided = data.provided;
     error.token_source = tokenSource;
+    error.slack_method = method;
+    recordDiagnosticFailure(error, {
+      kind: "slack_api",
+      method,
+      params_keys: paramKeys,
+      channel_targets: extractChannelTargetsFromParams(params),
+    });
     throw error;
   }
 
@@ -1296,6 +2033,13 @@ async function callSlackApiWithToken(method, params = {}, token, tokenSource) {
     error.needed = data.needed;
     error.provided = data.provided;
     error.token_source = tokenSource;
+    error.slack_method = method;
+    recordDiagnosticFailure(error, {
+      kind: "slack_api",
+      method,
+      params_keys: paramKeys,
+      channel_targets: extractChannelTargetsFromParams(params),
+    });
     throw error;
   }
 
@@ -1355,6 +2099,13 @@ async function callSlackApiViaGateway(method, params = {}, tokenOverride, option
     error.needed = body?.needed;
     error.provided = body?.provided;
     error.token_source = body?.token_source || "gateway";
+    error.slack_method = method;
+    recordDiagnosticFailure(error, {
+      kind: "gateway_api",
+      method,
+      http_status: response.status,
+      channel_targets: extractChannelTargetsFromParams(params),
+    });
     throw error;
   }
 
@@ -1364,6 +2115,13 @@ async function callSlackApiViaGateway(method, params = {}, tokenOverride, option
     error.needed = body?.needed;
     error.provided = body?.provided;
     error.token_source = body?.token_source || "gateway";
+    error.slack_method = method;
+    recordDiagnosticFailure(error, {
+      kind: "gateway_api",
+      method,
+      http_status: response.status,
+      channel_targets: extractChannelTargetsFromParams(params),
+    });
     throw error;
   }
 
@@ -1431,6 +2189,14 @@ async function callSlackApiWithCandidates(method, params, candidates) {
 
 async function callSlackApi(method, params = {}, tokenOverride, options = {}) {
   assertMethodPolicy(method);
+  if (!options.internalBypassAccess) {
+    assertAccessAllowed({
+      action_type: classifySlackMethodAction(method),
+      method,
+      tool_name: options.toolName || null,
+      channel_targets: extractChannelTargetsFromParams(params),
+    });
+  }
   const runtimeGateway = getRuntimeGatewayConfig();
   if (runtimeGateway.url) {
     return callSlackApiViaGateway(method, params, tokenOverride, options);
@@ -1452,11 +2218,12 @@ function successResult(payload) {
   };
 }
 
-function errorResult(error) {
+function errorResult(error, failureId) {
   const message = error instanceof Error ? error.message : String(error);
+  const text = failureId ? `${message}\n\nfailure_id: ${failureId}` : message;
   return {
     isError: true,
-    content: [{ type: "text", text: message }],
+    content: [{ type: "text", text }],
   };
 }
 
@@ -1465,7 +2232,8 @@ async function safeToolRun(executor) {
     const result = await executor();
     return successResult(result);
   } catch (error) {
-    return errorResult(error);
+    const failureId = error?.failure_id || recordDiagnosticFailure(error, { kind: "tool" });
+    return errorResult(error, failureId);
   }
 }
 
@@ -2482,6 +3250,13 @@ async function runOnboardServerStart(args) {
             sendJson(res, 400, { ok: false, error: "missing_method" });
             return;
           }
+          assertMethodPolicy(methodName);
+          assertAccessAllowed({
+            action_type: classifySlackMethodAction(methodName),
+            method: methodName,
+            tool_name: "gateway_run",
+            channel_targets: extractChannelTargetsFromParams(payload.params || {}),
+          });
 
           const candidates = getSlackTokenCandidates(payload.token_override, {
             profileSelector:
@@ -2706,6 +3481,19 @@ async function executeSlackHttpRequest({
   headers,
   token_override,
 }) {
+  const actionType = classifyHttpAction(http_method, url);
+  const channelTargets = normalizeChannelTargetList([
+    ...extractChannelTargetsFromParams(query),
+    ...extractChannelTargetsFromParams(json_body),
+    ...extractChannelTargetsFromParams(form_body),
+  ]);
+  assertAccessAllowed({
+    action_type: actionType,
+    url,
+    tool_name: "slack_http_api_call",
+    channel_targets: channelTargets,
+  });
+
   const runtimeGateway = getRuntimeGatewayConfig();
   if (runtimeGateway.url) {
     return slackHttpViaGateway({
@@ -2764,6 +3552,10 @@ async function executeSlackHttpRequest({
     headers: Object.fromEntries(res.headers.entries()),
     body: parsedBody,
   };
+}
+
+async function proxySlackHttpRequest(input) {
+  return executeSlackHttpRequest(input);
 }
 
 function registerSmartGatewayTools(server, catalog) {
@@ -3786,32 +4578,422 @@ function registerOperationsTools(server) {
       inputSchema: {},
     },
     async () =>
-      safeToolRun(async () => ({
-        execution_mode: "local_stdio",
-        tool_exposure_mode: TOOL_EXPOSURE_MODE,
-        tool_surface: {
-          gateway_tools_exposed: EXPOSE_GATEWAY_TOOLS,
-          raw_core_tools_exposed: EXPOSE_CORE_TOOLS,
-          method_tools_enabled: ENABLE_METHOD_TOOLS,
-        },
-        method_policy: {
-          allowlist: [...METHOD_ALLOWLIST.values()],
-          denylist: [...METHOD_DENYLIST.values()],
-          allow_prefixes: METHOD_ALLOW_PREFIXES,
-          deny_prefixes: METHOD_DENY_PREFIXES,
-        },
-        audit: {
-          enabled: ENABLE_AUDIT_LOG,
-          path: AUDIT_LOG_PATH,
-          note: "Audit entries are written as JSONL and avoid token values.",
-        },
-        operations: {
-          config_path: OPERATIONS_CONFIG_PATH,
+      safeToolRun(async () => {
+        const state = loadOperationsState();
+        const recentFailures = listRecentFailures(state, { limit: 5 }).map((record) => ({
+          id: record.id,
+          recorded_at: record.recorded_at,
+          kind: record.kind,
+          method: record.method || null,
+          message: record.message,
+          slack_error: record.slack_error || null,
+          http_status: record.http_status || null,
+        }));
+
+        return {
+          execution_mode: "local_stdio",
+          tool_exposure_mode: TOOL_EXPOSURE_MODE,
+          tool_surface: {
+            gateway_tools_exposed: EXPOSE_GATEWAY_TOOLS,
+            raw_core_tools_exposed: EXPOSE_CORE_TOOLS,
+            method_tools_enabled: ENABLE_METHOD_TOOLS,
+          },
+          method_policy: {
+            allowlist: [...METHOD_ALLOWLIST.values()],
+            denylist: [...METHOD_DENYLIST.values()],
+            allow_prefixes: METHOD_ALLOW_PREFIXES,
+            deny_prefixes: METHOD_DENY_PREFIXES,
+          },
+          audit: {
+            enabled: ENABLE_AUDIT_LOG,
+            path: AUDIT_LOG_PATH,
+            note: "Audit entries are written as JSONL and avoid token values.",
+          },
+          access_control: buildAccessControlOverview(state),
+          diagnostics: {
+            recent_failure_count: normalizeDiagnosticsState(state?.diagnostics).failures.length,
+            recent_failures: recentFailures,
+            note: "Use ops_recent_failures or ops_explain_error for human-readable troubleshooting.",
+          },
+          operations: {
+            config_path: OPERATIONS_CONFIG_PATH,
+            state_path: OPERATIONS_STATE_PATH,
+            summary: buildOperationsStateSummary(state),
+          },
+          playbooks: OPS_PLAYBOOKS,
+        };
+      })
+  );
+
+  server.registerTool(
+    "ops_access_policy_info",
+    {
+      description:
+        "Show access-control profiles, effective rules, pending elevation requests, and active grants.",
+      inputSchema: {},
+    },
+    async () =>
+      safeToolRun(async () => {
+        const state = loadOperationsState();
+        return {
           state_path: OPERATIONS_STATE_PATH,
-          summary: buildOperationsStateSummary(loadOperationsState()),
-        },
-        playbooks: OPS_PLAYBOOKS,
-      }))
+          access_control: buildAccessControlOverview(state),
+        };
+      })
+  );
+
+  server.registerTool(
+    "ops_access_policy_set",
+    {
+      description:
+        "Switch the active Slack access-control profile for this MCP runtime state.",
+      inputSchema: {
+        profile: z.string().min(1),
+        reason: z.string().optional(),
+      },
+    },
+    async ({ profile, reason }) =>
+      safeToolRun(async () => {
+        const accessConfig = getAccessControlConfig();
+        const targetProfile = String(profile || "").trim();
+        if (!targetProfile) throw new Error("`profile` is required.");
+        if (!accessConfig.profiles[targetProfile]) {
+          throw new Error(
+            `Unknown access profile: ${targetProfile}. Available profiles: ${Object.keys(
+              accessConfig.profiles || {}
+            ).join(", ")}`
+          );
+        }
+
+        const previousProfile =
+          normalizeAccessControlState(loadOperationsState().access_control).active_profile ||
+          accessConfig.default_profile;
+
+        mutateOperationsState((state) => {
+          const accessState = normalizeAccessControlState(state.access_control);
+          accessState.active_profile = targetProfile;
+          state.access_control = accessState;
+        });
+
+        const nextState = loadOperationsState();
+        safeJsonlAppend(AUDIT_LOG_PATH, {
+          ts: new Date().toISOString(),
+          event: "access_policy_set",
+          previous_profile: previousProfile,
+          active_profile: targetProfile,
+          reason: String(reason || "").trim(),
+        });
+
+        return {
+          previous_profile: previousProfile,
+          active_profile: targetProfile,
+          reason: String(reason || "").trim() || null,
+          access_control: buildAccessControlOverview(nextState),
+        };
+      })
+  );
+
+  server.registerTool(
+    "ops_access_request",
+    {
+      description:
+        "Create a scoped Slack access elevation request that must be approved before it becomes active.",
+      inputSchema: {
+        actions: z.array(z.enum(["read", "write", "admin", "delete", "*"])).min(1).max(5),
+        channels: z.array(z.string().min(1)).max(50).optional(),
+        methods: z.array(z.string().min(1)).max(50).optional(),
+        tools: z.array(z.string().min(1)).max(50).optional(),
+        duration_minutes: z.number().int().min(1).max(1440).optional(),
+        reason: z.string().min(1),
+      },
+    },
+    async ({ actions, channels, methods, tools, duration_minutes, reason }) =>
+      safeToolRun(async () => {
+        const accessConfig = getAccessControlConfig();
+        if (!accessConfig.enabled || accessConfig.elevation?.enabled === false) {
+          throw new Error("Access elevation is disabled in the current configuration.");
+        }
+
+        const normalizedChannels = normalizeChannelTargetList(channels || []);
+        const normalizedMethods = normalizeStringArray(methods || []);
+        const normalizedTools = normalizeStringArray(tools || []);
+        if (
+          normalizedChannels.length === 0 &&
+          normalizedMethods.length === 0 &&
+          normalizedTools.length === 0
+        ) {
+          throw new Error("Provide at least one scoped target in `channels`, `methods`, or `tools`.");
+        }
+
+        const requestRecord = normalizeAccessRequestRecord({
+          id: createOperationId("access"),
+          status: "pending",
+          requested_at: new Date().toISOString(),
+          actions,
+          methods_allow: normalizedMethods,
+          tools_allow: normalizedTools,
+          channels_allow: normalizedChannels,
+          duration_minutes: clampElevationDurationMinutes(duration_minutes),
+          reason: String(reason || "").trim(),
+        });
+
+        mutateOperationsState((state) => {
+          const accessState = normalizeAccessControlState(state.access_control);
+          accessState.requests[requestRecord.id] = requestRecord;
+          state.access_control = accessState;
+        });
+
+        safeJsonlAppend(AUDIT_LOG_PATH, {
+          ts: new Date().toISOString(),
+          event: "access_request_created",
+          request_id: requestRecord.id,
+          actions: requestRecord.actions,
+          duration_minutes: requestRecord.duration_minutes,
+          methods_allow: requestRecord.methods_allow,
+          tools_allow: requestRecord.tools_allow,
+          channels_allow: requestRecord.channels_allow.map((target) => target.reference || target.id || null),
+          reason: requestRecord.reason,
+        });
+
+        return {
+          request: summarizeAccessRequestRecord(requestRecord),
+          note: `Approval required. Run ops_access_approve with request_id=${requestRecord.id} to activate this grant.`,
+        };
+      })
+  );
+
+  server.registerTool(
+    "ops_access_approve",
+    {
+      description:
+        "Approve a pending access elevation request and convert it into an active time-boxed grant.",
+      inputSchema: {
+        request_id: z.string().min(1),
+        duration_minutes: z.number().int().min(1).max(1440).optional(),
+        reason: z.string().optional(),
+      },
+    },
+    async ({ request_id, duration_minutes, reason }) =>
+      safeToolRun(async () => {
+        const accessConfig = getAccessControlConfig();
+        if (!accessConfig.enabled || accessConfig.elevation?.enabled === false) {
+          throw new Error("Access elevation is disabled in the current configuration.");
+        }
+
+        const state = loadOperationsState();
+        const accessState = normalizeAccessControlState(state.access_control);
+        const existingRequest = accessState.requests[request_id];
+        if (!existingRequest) {
+          throw new Error(`Access request not found: ${request_id}`);
+        }
+
+        const requestRecord = normalizeAccessRequestRecord(existingRequest);
+        if (requestRecord.status !== "pending") {
+          throw new Error(
+            `Access request ${request_id} is not pending. Current status: ${requestRecord.status}.`
+          );
+        }
+
+        const effectiveDuration = clampElevationDurationMinutes(
+          duration_minutes || requestRecord.duration_minutes
+        );
+        const approvedAt = new Date().toISOString();
+        const expiresAt = new Date(Date.now() + effectiveDuration * 60 * 1000).toISOString();
+        const grantRecord = normalizeAccessGrantRecord({
+          ...requestRecord,
+          id: createOperationId("grant"),
+          status: "active",
+          approved_at: approvedAt,
+          created_at: approvedAt,
+          expires_at: expiresAt,
+          duration_minutes: effectiveDuration,
+          reason: String(reason || "").trim() || requestRecord.reason,
+        });
+
+        mutateOperationsState((mutableState) => {
+          const nextAccessState = normalizeAccessControlState(mutableState.access_control);
+          nextAccessState.requests[request_id] = {
+            ...requestRecord,
+            status: "approved",
+            approved_at: approvedAt,
+            expires_at: expiresAt,
+            duration_minutes: effectiveDuration,
+            grant_id: grantRecord.id,
+          };
+          nextAccessState.grants[grantRecord.id] = grantRecord;
+          mutableState.access_control = nextAccessState;
+        });
+
+        const nextState = loadOperationsState();
+        safeJsonlAppend(AUDIT_LOG_PATH, {
+          ts: approvedAt,
+          event: "access_request_approved",
+          request_id,
+          grant_id: grantRecord.id,
+          duration_minutes: effectiveDuration,
+          expires_at: expiresAt,
+          reason: grantRecord.reason,
+        });
+
+        return {
+          request: summarizeAccessRequestRecord(
+            normalizeAccessControlState(nextState.access_control).requests[request_id]
+          ),
+          grant: summarizeAccessGrantRecord(grantRecord),
+          access_control: buildAccessControlOverview(nextState),
+        };
+      })
+  );
+
+  server.registerTool(
+    "ops_access_revoke",
+    {
+      description:
+        "Revoke one active access grant, or all active grants, and persist the revocation in local state.",
+      inputSchema: {
+        grant_id: z.string().optional(),
+        revoke_all_active: z.boolean().optional(),
+        reason: z.string().optional(),
+      },
+    },
+    async ({ grant_id, revoke_all_active, reason }) =>
+      safeToolRun(async () => {
+        if (!grant_id && revoke_all_active !== true) {
+          throw new Error("Provide `grant_id` or set `revoke_all_active=true`.");
+        }
+
+        const state = loadOperationsState();
+        const accessState = normalizeAccessControlState(state.access_control);
+        const now = new Date().toISOString();
+        const targetIds =
+          revoke_all_active === true
+            ? Object.values(accessState.grants)
+                .map((record) => normalizeAccessGrantRecord(record))
+                .filter((record) => record.status === "active")
+                .map((record) => record.id)
+            : [String(grant_id || "").trim()];
+
+        const revokedIds = targetIds.filter((id) => {
+          const record = normalizeAccessGrantRecord(accessState.grants[id]);
+          return record.id && record.status === "active";
+        });
+
+        if (revokedIds.length === 0) {
+          throw new Error("No active grants matched the revoke request.");
+        }
+
+        mutateOperationsState((mutableState) => {
+          const nextAccessState = normalizeAccessControlState(mutableState.access_control);
+          for (const id of revokedIds) {
+            const record = normalizeAccessGrantRecord(nextAccessState.grants[id]);
+            nextAccessState.grants[id] = {
+              ...record,
+              status: "revoked",
+              revoked_at: now,
+              reason: String(reason || "").trim() || record.reason,
+            };
+          }
+          for (const [requestId, requestRecord] of Object.entries(nextAccessState.requests)) {
+            if (!revokedIds.includes(requestRecord?.grant_id || "")) continue;
+            nextAccessState.requests[requestId] = {
+              ...normalizeAccessRequestRecord(requestRecord),
+              status: "revoked",
+              expires_at: requestRecord?.expires_at || now,
+            };
+          }
+          mutableState.access_control = nextAccessState;
+        });
+
+        const nextState = loadOperationsState();
+        safeJsonlAppend(AUDIT_LOG_PATH, {
+          ts: now,
+          event: "access_grant_revoked",
+          grant_ids: revokedIds,
+          revoke_all_active: revoke_all_active === true,
+          reason: String(reason || "").trim(),
+        });
+
+        return {
+          revoked_count: revokedIds.length,
+          revoked_grants: revokedIds.map((id) =>
+            summarizeAccessGrantRecord(normalizeAccessControlState(nextState.access_control).grants[id])
+          ),
+          access_control: buildAccessControlOverview(nextState),
+        };
+      })
+  );
+
+  server.registerTool(
+    "ops_recent_failures",
+    {
+      description:
+        "List recent tool, Slack API, or access-control failures from local diagnostics state.",
+      inputSchema: {
+        limit: z.number().int().min(1).max(200).optional(),
+        kind: z.string().optional(),
+        method: z.string().optional(),
+      },
+    },
+    async ({ limit, kind, method }) =>
+      safeToolRun(async () => {
+        const state = loadOperationsState();
+        const failures = listRecentFailures(state, {
+          limit: limit ?? 20,
+          kind,
+          method,
+        });
+        return {
+          state_path: OPERATIONS_STATE_PATH,
+          count: failures.length,
+          failures,
+        };
+      })
+  );
+
+  server.registerTool(
+    "ops_explain_error",
+    {
+      description:
+        "Explain a recorded failure in human-readable form using the latest diagnostics snapshot.",
+      inputSchema: {
+        failure_id: z.string().optional(),
+      },
+    },
+    async ({ failure_id }) =>
+      safeToolRun(async () => {
+        const state = loadOperationsState();
+        const diagnostics = normalizeDiagnosticsState(state.diagnostics);
+        const failure = failure_id
+          ? diagnostics.failures.find((record) => record.id === failure_id) || null
+          : listRecentFailures(state, { limit: 1 })[0] || null;
+
+        if (!failure) {
+          throw new Error(
+            failure_id
+              ? `Failure not found: ${failure_id}`
+              : "No recorded failures are available in diagnostics state."
+          );
+        }
+
+        const accessOverview =
+          failure.kind === "access_control" ? buildAccessControlOverview(state) : null;
+
+        return {
+          failure,
+          audit_log_path: AUDIT_LOG_PATH,
+          related_access_control: accessOverview
+            ? {
+                active_profile: accessOverview.active_profile,
+                effective_rules: accessOverview.effective_rules,
+                pending_requests: accessOverview.pending_requests,
+              }
+            : null,
+          suggested_next_tools:
+            failure.kind === "access_control"
+              ? ["ops_access_policy_info", "ops_access_request", "ops_access_approve"]
+              : ["ops_recent_failures", "ops_audit_log_read"],
+        };
+      })
   );
 
   server.registerTool(
@@ -4658,7 +5840,7 @@ function registerOperationsTools(server) {
       })
   );
 
-  return { registered: 14 };
+  return { registered: 21 };
 }
 
 function registerCatalogMethodTools(server, catalog) {
